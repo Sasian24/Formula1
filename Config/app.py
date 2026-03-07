@@ -4,9 +4,10 @@ from datetime import datetime, date, timedelta
 import pandas as pd
 import requests  
 
-# --- 1. CONFIGURACIÓN Y CONEXIÓN ---
+# --- 1. CONFIGURACIÓN VISUAL ---
 st.set_page_config(page_title="Liga SasianGP 2026", page_icon="🏎️", layout="wide") 
 
+# --- 2. CONEXIÓN A BASE DE DATOS ---
 gc = gspread.service_account(filename="Config/credenciales.json")
 sh = gc.open("SasianGP_DB")
 tabla_quinielas = sh.worksheet("Quinielas")
@@ -14,7 +15,7 @@ tabla_jugadores = sh.worksheet("Jugadores")
 tabla_resultados = sh.worksheet("Resultados") 
 tabla_calendario = sh.worksheet("Calendario") 
 
-# --- 2. LOGOS Y CATÁLOGOS ---
+# --- 3. LOGOS A PRUEBA DE BALAS ---
 url_logos = {
     "Red Bull Racing": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/red-bull.png",
     "Ferrari": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/ferrari.png",
@@ -26,14 +27,20 @@ url_logos = {
     "RB": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/rb.png",
     "Kick Sauber": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/sauber.png",
     "Haas": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/haas.png",
-    "Cadillac": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Cadillac_Logo.svg/320px-Cadillac_Logo.svg.png"
+    # Enlace directo y estable de Cadillac desde 1000logos.net
+    "Cadillac": "https://1000logos.net/wp-content/uploads/2018/02/Cadillac-Logo.png"
 }
 
 pilotos = sorted(["Checo Pérez", "Max Verstappen", "Charles Leclerc", "Lewis Hamilton", "Lando Norris", "Oscar Piastri", "George Russell", "Fernando Alonso", "Carlos Sainz", "Franco Colapinto", "Nico Hülkenberg", "Esteban Ocon", "Pierre Gasly", "Alex Albon", "Yuki Tsunoda", "Lance Stroll"])
 carreras = [
     "1. GP de Australia (Marzo)", "2. GP de China (Marzo)", "3. GP de Japón (Marzo)", 
     "4. GP de Bahréin (Abril)", "5. GP de Arabia Saudita (Abril)", "6. GP de Miami (Mayo)", 
-    "7. GP de Canadá (Mayo)", "8. GP de Mónaco (Junio)", "9. GP de España - Barcelona (Junio)"
+    "7. GP de Canadá (Mayo)", "8. GP de Mónaco (Junio)", "9. GP de España - Barcelona (Junio)",
+    "10. GP de Austria (Junio)", "11. GP de Gran Bretaña (Julio)", "12. GP de Bélgica (Julio)", 
+    "13. GP de Hungría (Julio)", "14. GP de Países Bajos (Agosto)", "15. GP de Italia - Monza (Septiembre)", 
+    "16. GP de España - Madrid (Septiembre)", "17. GP de Azerbaiyán (Septiembre)", "18. GP de Singapur (Octubre)", 
+    "19. GP de Estados Unidos - Austin (Octubre)", "20. GP de México (Oct-Nov)", "21. GP de Brasil (Noviembre)", 
+    "22. GP de Las Vegas (Noviembre)", "23. GP de Qatar (Noviembre)", "24. GP de Abu Dhabi (Diciembre)"
 ]
 
 traductor_api = {
@@ -43,13 +50,13 @@ traductor_api = {
     "Colapinto": "Franco Colapinto"
 }
 
-# --- 3. GESTIÓN DE SESIÓN ---
+# --- 4. GESTIÓN DE SESIÓN ---
 if 'usuario_activo' not in st.session_state: st.session_state['usuario_activo'] = None
 if 'auto_c1' not in st.session_state: st.session_state['auto_c1'] = None
 if 'auto_c2' not in st.session_state: st.session_state['auto_c2'] = None
 if 'auto_c3' not in st.session_state: st.session_state['auto_c3'] = None
 
-# --- 4. ACCESO ---
+# --- 5. INTERFAZ DE ACCESO ---
 if st.session_state['usuario_activo'] is None:
     st.title("🔐 Acceso - SasianGP")
     u = st.text_input("Alias de Piloto:")
@@ -64,7 +71,7 @@ if st.session_state['usuario_activo'] is None:
                 st.rerun()
             else: st.error("❌ Acceso Denegado. Piloto no registrado o contraseña inválida.")
 
-# --- 5. APLICACIÓN PRINCIPAL ---
+# --- 6. APLICACIÓN PRINCIPAL ---
 else:
     es_admin = st.session_state['usuario_activo'] == "Sasian"
 
@@ -80,7 +87,6 @@ else:
             st.session_state['usuario_activo'] = None
             st.rerun()
 
-    # BANNER PREMIUM SASIAN
     st.markdown("""
         <div style="display: flex; justify-content: space-between; align-items: center; background: #1e1e1e; padding: 15px; border-radius: 12px; margin-bottom: 25px; border-bottom: 4px solid #E10600; box-shadow: 0px 4px 10px rgba(0,0,0,0.5);">
             <span style="font-size: 2.5rem;">🏁</span>
@@ -97,35 +103,34 @@ else:
         df_cal = pd.DataFrame(tabla_calendario.get_all_records())
         gp_sel = st.selectbox("🌎 Selecciona Gran Premio:", carreras, index=None)
         
-        bq, bc = False, False
-        f_qualy_str, f_carrera_str = "Por definir", "Por definir"
-        
-        if gp_sel and not df_cal.empty:
+        if not gp_sel:
+            st.info("👆 Selecciona un Gran Premio en el menú de arriba para abrir los pits y comenzar tu captura.")
+        else:
+            bq, bc = True, True 
+            f_qualy_str, f_carrera_str = "Error de Fecha", "Error de Fecha"
+            
             f = df_cal[df_cal['Carrera'] == gp_sel]
             if not f.empty:
-                f_q = str(f.iloc[0]['Fecha_Qualy'])
-                f_c = str(f.iloc[0]['Fecha_Carrera'])
+                f_q = str(f.iloc[0]['Fecha_Qualy']).strip()
+                f_c = str(f.iloc[0]['Fecha_Carrera']).strip()
                 
-                # FORZAMOS EL FORMATO 24 HORAS: HH:MM DD-MM-YYYY
-                try:
-                    dt_q = pd.to_datetime(f_q)
-                    dt_c = pd.to_datetime(f_c)
-                    f_qualy_str = dt_q.strftime("%H:%M  %d-%m-%Y")
-                    f_carrera_str = dt_c.strftime("%H:%M  %d-%m-%Y")
-                except:
-                    f_qualy_str = f_q
-                    f_carrera_str = f_c
+                # Reloj Suizo reforzado: Forzamos la lectura exacta del formato de Excel
+                dt_q = pd.to_datetime(f_q, format="%H:%M %d-%m-%Y", errors='coerce')
+                dt_c = pd.to_datetime(f_c, format="%H:%M %d-%m-%Y", errors='coerce')
                 
-                st.info(f"⏱️ **Límites de Apuesta (24 hrs):** \n* **Qualy:** {f_qualy_str} \n* **Carrera:** {f_carrera_str}")
+                if pd.notna(dt_q): f_qualy_str = dt_q.strftime("%H:%M  %d-%m-%Y")
+                else: f_qualy_str = f_q
+                
+                if pd.notna(dt_c): f_carrera_str = dt_c.strftime("%H:%M  %d-%m-%Y")
+                else: f_carrera_str = f_c
                 
                 ahora = datetime.now()
-                try:
-                    if ahora > (dt_q - timedelta(hours=1)): bq = True
-                    if ahora > (dt_c - timedelta(hours=1)): bc = True
-                except: pass
+                # Bloqueo implacable: Si es menos de 1 hora o ya pasó, candado puesto.
+                if pd.notna(dt_q) and ahora > (dt_q - timedelta(hours=1)): bq = True
+                if pd.notna(dt_c) and ahora > (dt_c - timedelta(hours=1)): bc = True
 
         with st.form("apuesta_form"):
-            st.markdown(f"### ⏱️ Calificación (Inicia: {f_qualy_str})")
+            st.markdown(f"### ⏱️ Calificación (Cierre 1 hr antes de: {f_qualy_str})")
             c1, c2, c3 = st.columns(3)
             with c1: q1 = st.selectbox("PP1 (Pole):", pilotos, index=None, disabled=bq)
             with c2: q2 = st.selectbox("PP2:", pilotos, index=None, disabled=bq)
@@ -133,7 +138,7 @@ else:
             
             st.write("---")
             
-            st.markdown(f"### 🏁 Carrera (Inicia: {f_carrera_str})")
+            st.markdown(f"### 🏁 Carrera (Cierre 1 hr antes de: {f_carrera_str})")
             c4, c5, c6 = st.columns(3)
             with c4: g1 = st.selectbox("Ganador (P1):", pilotos, index=None, disabled=bc)
             with c5: g2 = st.selectbox("P2:", pilotos, index=None, disabled=bc)
@@ -146,16 +151,20 @@ else:
             with b1: vr = st.selectbox("🚀 Vuelta Rápida:", pilotos, index=None, disabled=bc)
             with b2: ab = st.selectbox("💥 Primer Abandono (Opcional):", pilotos, index=None, disabled=bc)
             
-            if st.form_submit_button("🏎️ Enviar Pronóstico a Telemetría", disabled=(bq and bc)):
-                if not gp_sel: st.error("⚠️ Llantas frías. Debes seleccionar una carrera.")
+            if st.form_submit_button("🏎️ Enviar Pronóstico a Telemetría"):
+                # Verificamos los candados en el momento de apretar el botón por si se quedaron con la ventana abierta
+                if not gp_sel: 
+                    st.error("⚠️ Llantas frías. Debes seleccionar una carrera.")
+                elif bq and bc:
+                    st.error("🔒 Los pits ya están cerrados para este Gran Premio.")
                 else:
                     v_ab = "🔒 CERRADO" if bc else (ab if ab else "")
                     fila = [datetime.now().strftime("%Y-%m-%d %H:%M:%S"), st.session_state['usuario_activo'], gp_sel, q1, q2, q3, g1, g2, g3, vr, v_ab, 0]
                     tabla_quinielas.append_row(fila)
-                    st.success("✅ ¡Apuesta sellada y registrada! Suerte, la vas a necesitar.")
+                    st.success("✅ ¡Apuesta sellada y registrada! Suerte.")
                     st.balloons()
 
-    # --- PANTALLA: EL PADDOCK ---
+    # --- PANTALLA: EL PADDOCK (LOGOS DEPURADOS) ---
     elif menu == "🏆 El Paddock":
         st.subheader("Clasificación Mundial del Campeonato")
         datos_q = tabla_quinielas.get_all_records()
@@ -165,14 +174,15 @@ else:
             df_a = pd.DataFrame(datos_q)
             df_a['Puntos_Totales'] = pd.to_numeric(df_a['Puntos_Totales'], errors='coerce').fillna(0)
             
-            # BLINDAJE ANTI-ESPACIOS INVISIBLES
+            # Blindaje maestro anti-errores de dedo y espacios invisibles
             df_a['Jugador'] = df_a['Jugador'].astype(str).str.strip()
             if not df_j.empty:
-                # Limpiamos todos los nombres de columnas para que siempre encuentre 'Escuderia_Favorita'
+                # Limpiamos todos los nombres de columnas de tu Sheet
                 df_j.columns = df_j.columns.str.strip() 
                 df_j['Nombre'] = df_j['Nombre'].astype(str).str.strip()
                 col_e = 'Escuderia_Favorita' if 'Escuderia_Favorita' in df_j.columns else 'Escudería'
                 if col_e in df_j.columns:
+                    # Título de escudería exacto para que el diccionario lo encuentre
                     df_j[col_e] = df_j[col_e].astype(str).str.strip()
             
             res = df_a.groupby('Jugador')['Puntos_Totales'].sum().reset_index()
@@ -180,6 +190,7 @@ else:
             
             if not df_j.empty and col_e in df_j.columns:
                 res = res.merge(df_j[['Nombre', col_e]], left_on='Jugador', right_on='Nombre', how='left')
+                # Mapeamos los logos, si no encuentra, ponemos por defecto la de Cadillac como genérica
                 res['🛡️'] = res[col_e].map(url_logos).fillna(url_logos["Cadillac"])
             else:
                 res['🛡️'] = url_logos["Cadillac"]
