@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "motorsasiangp",
+  "private_key_id": "95caf132d3e30d015d2580dbb3ec588a2fe645d8",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCp0wWSNO4Y9Sd1\nICzsuEu5W4kPMd9jR+zr7ucgC/ykmkwrwvhQcZIgIEtBEuU/L2Hl141qAaNULcFg\nntVwzsm1tdpRhGcTMtWgtwUZIdzUvbnPvCmKxoGvTIUWGfrlMA9hqXE8Vsb6gmEf\n2GUjR0DIsi6/i5aKIw5hC89dau+TBnex4Ri604po2nVeuxgH86OeME7yfAU5Lw6X\niAgTYsoBQ6nw7qGo/vMmH+j0hI5+ZR0YVP2okqX8DPulh2tk6aSj7TFHr3f1fQUE\nggGw0bJ/IEU6sxLT5iURfClGEVtFEMf2EmwL05Xo2GjDUHsgyJHvz4fM9LmU/Pe3\nIAYPAZfZAgMBAAECggEAH7gZIImP1iwF+mev1GgIxr5sz2B8jaXbv+Z/l1n9zn2+\nT+cq65WG2kbF34notSBDvAMCeAQFzl18crBABAGvpaepdxPQj8KtKYc9pcfQIBEu\nwTjvFmtEwin76pigJsoO+WoFSySXJiePffv0Sf5PQJ0dQ6wOCk+JakFjMhrc0/wx\ndct1B5bo+T67sv17tzk3O7TJsy6Sa6n2AS7vZXWYS3rW/VlD6xrPT0cLk0hIf0N+\n2eR8XjPhDOCb0RMBalVlITNiHr/My44/TSnD6QA5P+aM4w6cTjwFWrQ4MSekyzIn\noHdkqTSG7DgEm767dH16uGvZp1bzsXBwm0vhN9IsjQKBgQDegPZea//gbNUnZXCc\nB28yhmabChznpMBFz7jDvvXrIQYP+bsqezt8ZJmp9ka4668nX9YCALSc1DPA6bSc\nWKriW7hhjK2yPrquYrQSlek+VlGxexUhWIzGtqPrFr7YRx6ya2g/326n6uXnmMDC\nuQE8Ad6/08p7z5rAjGUaA88UVQKBgQDDY9qkvq9t+sr+ND41fKsEoW/BMvMUBG2p\ncYanF4pRLFp5N0qHH3wxDcdqmMAEOw5heyt8EpsfRZWnLZkWSI8kRXy7e7PiI4J/\nN5EAENnXGuCZSdStbS8EMOPiMsbJucM9tY70s+6uPeHBmeuFtK9j5uQhyeXQ6CJh\naw+nX90ZdQKBgQC6cqyAQNXAtNIE2j77sEsgtnjicB36ihbIKSE1fh5KMnkHCAgr\nt+oH+bC+OG3Y5T33q5oEQZ0XUcYwYGYFIVPIrH0b2StwEpqSKImmjVJO9zwrke0J\n7U7B8Sf4hi3Tw/zYG6LW6x6pvO98G4djZG3BX/vNGOcyyqttr/fETe7HpQKBgQCT\neHI1lZZis78yTcwGIqoRPKdUclf068K4+O5gfuvuiENg6dJeWe0qOPQiCFgk2U3p\nVUVkx8Y8vBBPtaKtpuYiwi96ccs7CwIbcp0GJ7HDII4UJB1ZJ+csipn0x84xwvsR\nQE89cfDboekabknNCKq4BDR7LB9ApXQNgvi1oy0FYQKBgCWOVf6QK0Y2Ox21y9FV\nHvATvtAgXuOdmn9yIh9buBGPzZtKNqMN9zRWgKdtpahMpTIbXNZGWgbYsc2rZKIA\n2ZsD/3pw7r/2qirwWWTJGBJQQEI+07V6LlBAd3/s+qCXHe2huU8IUouvEHY6jXGX\nLWF+JWRUYYO2+8szyOz7BtOL\n-----END PRIVATE KEY-----\n",
+  "client_email": "robot-sasian@motorsasiangp.iam.gserviceaccount.com",
+  "client_id": "118059847735822269022",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/robot-sasian%40motorsasiangp.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
