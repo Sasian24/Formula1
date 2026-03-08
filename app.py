@@ -27,8 +27,7 @@ url_logos = {
     "RB": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/rb.png",
     "Kick Sauber": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/sauber.png",
     "Haas": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/haas.png",
-    # Enlace directo y estable de Cadillac desde 1000logos.net
-    "Cadillac": "https://1000logos.net/wp-content/uploads/2018/02/Cadillac-Logo.png"
+    "Cadillac": "https://www.google.com/s2/favicons?sz=128&domain=cadillac.com"
 }
 
 pilotos = sorted(["Checo Pérez", "Max Verstappen", "Charles Leclerc", "Lewis Hamilton", "Lando Norris", "Oscar Piastri", "George Russell", "Fernando Alonso", "Carlos Sainz", "Franco Colapinto", "Nico Hülkenberg", "Esteban Ocon", "Pierre Gasly", "Alex Albon", "Yuki Tsunoda", "Lance Stroll"])
@@ -97,11 +96,10 @@ else:
         </div>
     """, unsafe_allow_html=True)
 
-    # --- PANTALLA: APUESTAS ---
     if menu == "📝 Hacer Apuesta":
         st.subheader("Tu Pronóstico Oficial")
         df_cal = pd.DataFrame(tabla_calendario.get_all_records())
-        gp_sel = st.selectbox("🌎 Selecciona Gran Premio:", carreras, index=None)
+        gp_sel = st.selectbox("🌎 Selecciona Gran Premio:", carreras, index=None, placeholder="Elige un Gran Premio...")
         
         if not gp_sel:
             st.info("👆 Selecciona un Gran Premio en el menú de arriba para abrir los pits y comenzar tu captura.")
@@ -114,57 +112,49 @@ else:
                 f_q = str(f.iloc[0]['Fecha_Qualy']).strip()
                 f_c = str(f.iloc[0]['Fecha_Carrera']).strip()
                 
-                # Reloj Suizo reforzado: Forzamos la lectura exacta del formato de Excel
                 dt_q = pd.to_datetime(f_q, format="%H:%M %d-%m-%Y", errors='coerce')
                 dt_c = pd.to_datetime(f_c, format="%H:%M %d-%m-%Y", errors='coerce')
-                
-                if pd.notna(dt_q): f_qualy_str = dt_q.strftime("%H:%M  %d-%m-%Y")
-                else: f_qualy_str = f_q
-                
-                if pd.notna(dt_c): f_carrera_str = dt_c.strftime("%H:%M  %d-%m-%Y")
-                else: f_carrera_str = f_c
-                
                 ahora = datetime.now()
-                # Bloqueo implacable: Si es menos de 1 hora o ya pasó, candado puesto.
-                if pd.notna(dt_q) and ahora > (dt_q - timedelta(hours=1)): bq = True
-                if pd.notna(dt_c) and ahora > (dt_c - timedelta(hours=1)): bc = True
+                
+                if pd.notna(dt_q): 
+                    f_qualy_str = dt_q.strftime("%H:%M  %d-%m-%Y")
+                    if ahora < (dt_q - timedelta(hours=1)): bq = False
+                if pd.notna(dt_c): 
+                    f_carrera_str = dt_c.strftime("%H:%M  %d-%m-%Y")
+                    if ahora < (dt_c - timedelta(hours=1)): bc = False
 
-        with st.form("apuesta_form"):
-            st.markdown(f"### ⏱️ Calificación (Cierre 1 hr antes de: {f_qualy_str})")
-            c1, c2, c3 = st.columns(3)
-            with c1: q1 = st.selectbox("PP1 (Pole):", pilotos, index=None, disabled=bq)
-            with c2: q2 = st.selectbox("PP2:", pilotos, index=None, disabled=bq)
-            with c3: q3 = st.selectbox("PP3:", pilotos, index=None, disabled=bq)
-            
-            st.write("---")
-            
-            st.markdown(f"### 🏁 Carrera (Cierre 1 hr antes de: {f_carrera_str})")
-            c4, c5, c6 = st.columns(3)
-            with c4: g1 = st.selectbox("Ganador (P1):", pilotos, index=None, disabled=bc)
-            with c5: g2 = st.selectbox("P2:", pilotos, index=None, disabled=bc)
-            with c6: g3 = st.selectbox("P3:", pilotos, index=None, disabled=bc)
-            
-            st.write("---")
-            
-            st.markdown("### 🎲 Bonos Especiales")
-            b1, b2 = st.columns(2)
-            with b1: vr = st.selectbox("🚀 Vuelta Rápida:", pilotos, index=None, disabled=bc)
-            with b2: ab = st.selectbox("💥 Primer Abandono (Opcional):", pilotos, index=None, disabled=bc)
-            
-            if st.form_submit_button("🏎️ Enviar Pronóstico a Telemetría"):
-                # Verificamos los candados en el momento de apretar el botón por si se quedaron con la ventana abierta
-                if not gp_sel: 
-                    st.error("⚠️ Llantas frías. Debes seleccionar una carrera.")
-                elif bq and bc:
-                    st.error("🔒 Los pits ya están cerrados para este Gran Premio.")
-                else:
-                    v_ab = "🔒 CERRADO" if bc else (ab if ab else "")
-                    fila = [datetime.now().strftime("%Y-%m-%d %H:%M:%S"), st.session_state['usuario_activo'], gp_sel, q1, q2, q3, g1, g2, g3, vr, v_ab, 0]
-                    tabla_quinielas.append_row(fila)
-                    st.success("✅ ¡Apuesta sellada y registrada! Suerte.")
-                    st.balloons()
+            with st.form("apuesta_form"):
+                st.markdown(f"### ⏱️ Calificación (Cierre 1 hr antes de: {f_qualy_str})")
+                c1, c2, c3 = st.columns(3)
+                with c1: q1 = st.selectbox("PP1 (Pole):", pilotos, index=None, disabled=bq, placeholder="Elige piloto...")
+                with c2: q2 = st.selectbox("PP2:", pilotos, index=None, disabled=bq, placeholder="Elige piloto...")
+                with c3: q3 = st.selectbox("PP3:", pilotos, index=None, disabled=bq, placeholder="Elige piloto...")
+                
+                st.write("---")
+                
+                st.markdown(f"### 🏁 Carrera (Cierre 1 hr antes de: {f_carrera_str})")
+                c4, c5, c6 = st.columns(3)
+                with c4: g1 = st.selectbox("Ganador (P1):", pilotos, index=None, disabled=bc, placeholder="Elige piloto...")
+                with c5: g2 = st.selectbox("P2:", pilotos, index=None, disabled=bc, placeholder="Elige piloto...")
+                with c6: g3 = st.selectbox("P3:", pilotos, index=None, disabled=bc, placeholder="Elige piloto...")
+                
+                st.write("---")
+                
+                st.markdown("### 🎲 Bonos Especiales")
+                b1, b2 = st.columns(2)
+                with b1: vr = st.selectbox("🚀 Vuelta Rápida:", pilotos, index=None, disabled=bc, placeholder="Elige piloto...")
+                with b2: ab = st.selectbox("💥 Primer Abandono (Opcional):", pilotos, index=None, disabled=bc, placeholder="Elige piloto o deja en blanco...")
+                
+                if st.form_submit_button("🏎️ Sellar Apuesta"):
+                    if bq and bc:
+                        st.error("🔒 El candado de la FIA ya cayó. Los pits están cerrados para esta sesión.")
+                    else:
+                        v_ab = "🔒 CERRADO" if bc else (ab if ab else "")
+                        fila = [datetime.now().strftime("%Y-%m-%d %H:%M:%S"), st.session_state['usuario_activo'], gp_sel, q1, q2, q3, g1, g2, g3, vr, v_ab, 0]
+                        tabla_quinielas.append_row(fila)
+                        st.success("✅ ¡Apuesta sellada y registrada! Suerte.")
+                        st.balloons()
 
-    # --- PANTALLA: EL PADDOCK (LOGOS DEPURADOS) ---
     elif menu == "🏆 El Paddock":
         st.subheader("Clasificación Mundial del Campeonato")
         datos_q = tabla_quinielas.get_all_records()
@@ -173,16 +163,12 @@ else:
         if datos_q:
             df_a = pd.DataFrame(datos_q)
             df_a['Puntos_Totales'] = pd.to_numeric(df_a['Puntos_Totales'], errors='coerce').fillna(0)
-            
-            # Blindaje maestro anti-errores de dedo y espacios invisibles
             df_a['Jugador'] = df_a['Jugador'].astype(str).str.strip()
             if not df_j.empty:
-                # Limpiamos todos los nombres de columnas de tu Sheet
                 df_j.columns = df_j.columns.str.strip() 
                 df_j['Nombre'] = df_j['Nombre'].astype(str).str.strip()
                 col_e = 'Escuderia_Favorita' if 'Escuderia_Favorita' in df_j.columns else 'Escudería'
                 if col_e in df_j.columns:
-                    # Título de escudería exacto para que el diccionario lo encuentre
                     df_j[col_e] = df_j[col_e].astype(str).str.strip()
             
             res = df_a.groupby('Jugador')['Puntos_Totales'].sum().reset_index()
@@ -190,7 +176,6 @@ else:
             
             if not df_j.empty and col_e in df_j.columns:
                 res = res.merge(df_j[['Nombre', col_e]], left_on='Jugador', right_on='Nombre', how='left')
-                # Mapeamos los logos, si no encuentra, ponemos por defecto la de Cadillac como genérica
                 res['🛡️'] = res[col_e].map(url_logos).fillna(url_logos["Cadillac"])
             else:
                 res['🛡️'] = url_logos["Cadillac"]
@@ -200,51 +185,24 @@ else:
                 res[['🛡️', 'Jugador', 'Puntos_Totales']],
                 use_container_width=True,
                 hide_index=True,
-                column_config={
-                    "🛡️": st.column_config.ImageColumn("", width="small"),
-                    "Jugador": st.column_config.TextColumn("PILOTO"),
-                    "Puntos_Totales": st.column_config.NumberColumn("PTS ⚡", format="%d")
-                }
+                column_config={"🛡️": st.column_config.ImageColumn("", width="small"), "Jugador": st.column_config.TextColumn("PILOTO"), "Puntos_Totales": st.column_config.NumberColumn("PTS ⚡", format="%d")}
             )
         else:
             st.info("🚦 El semáforo sigue en rojo. Aún no hay pronósticos registrados.")
 
-    # --- PANTALLA: REGLAMENTO OFICIAL ---
     elif menu == "📖 Reglamento Oficial":
         st.header("📜 REGLAMENTO DEPORTIVO SASIANGP 2026")
         st.write("Bienvenidos a la máxima categoría. Aquí venimos a apostar el honor, no a hacer amigos. Lean las reglas a detalle para que luego no anden llorando por los rincones exigiendo puntos que no se ganaron.")
         st.markdown("---")
-        
         st.markdown("### ⏱️ ARTÍCULO 1: El Reloj No Perdona (Cierre de Pits)")
-        st.info("""
-        El sistema cuenta con un **Reloj Suizo** automático en formato de 24 hrs. 
-        * **Calificación (Qualy):** Se bloquea **EXACTAMENTE 1 HORA ANTES** de que los autos salgan a la pista el sábado.
-        * **Carrera:** Se bloquea **EXACTAMENTE 1 HORA ANTES** del semáforo en verde del domingo.
-        * **Excepciones:** NINGUNA. Si entras a la app 59 minutos antes, las cajitas estarán en gris y te vas con 0 puntos en esa sesión. Ni mandándole un WhatsApp a Sasian se te va a abrir el sistema.
-        """)
-        
+        st.info("El sistema cuenta con un **Reloj Suizo** automático en formato de 24 hrs. \n* **Calificación (Qualy):** Se bloquea **EXACTAMENTE 1 HORA ANTES** de que los autos salgan a la pista.\n* **Carrera:** Se bloquea **EXACTAMENTE 1 HORA ANTES** del semáforo en verde.\n* **Excepciones:** NINGUNA. Si entras a la app 59 minutos antes, las cajitas estarán en gris y te vas con 0 puntos. Ni mandándole WhatsApp a Sasian se abre.")
         st.markdown("### 🎯 ARTÍCULO 2: El Podio (Precisión Absoluta)")
-        st.success("""
-        Aquí no hay premios de consolación por "casi" atinarle. O le das a la posición exacta o tienes cero. Si pones a Checo Pérez en P1 y llega en P2, **no sumas nada**.
-        * 🥇 **Ganador de la Carrera (P1):** Te otorga **+3 Puntos**.
-        * 🥈 **Segundo Lugar (P2):** Te otorga **+3 Puntos**.
-        * 🥉 **Tercer Lugar (P3):** Te otorga **+3 Puntos**.
-        * ⏱️ **Pole Position (Qualy P1):** Te otorga **+3 Puntos** (Solo cuenta el PP1, P2 y P3 de la Qualy por ahora son de desempate/honor).
-        * 🚀 **Vuelta Rápida:** Te otorga **+2 Puntos** si adivinas quién hace el giro más rápido durante la carrera del domingo.
-        """)
-
+        st.success("Aquí no hay premios de consolación por 'casi' atinarle. O le das a la posición exacta o tienes cero.\n* 🥇 **Ganador (P1):** +3 Puntos.\n* 🥈 **Segundo (P2):** +3 Puntos.\n* 🥉 **Tercer (P3):** +3 Puntos.\n* ⏱️ **Pole Position (Qualy P1):** +3 Puntos.\n* 🚀 **Vuelta Rápida:** +2 Puntos si adivinas quién hace el giro más rápido el domingo.")
         st.markdown("### ☠️ ARTÍCULO 3: El Bono 'Salado' (Riesgo Extremo)")
-        st.warning("""
-        Para los morbosos que disfrutan ver fibra de carbono volando. Esta apuesta es **OPCIONAL**. Si decides maldecir a un piloto y pronosticas que será el **Primer Abandono** de la carrera:
-        * ✅ **Si Acertaste:** Si tu piloto choca, se le funde el motor o abandona primero que nadie, eres un genio del mal y te llevas **+5 Puntos** directos.
-        * ❌ **Si Fallaste:** Si tu piloto sobrevive la carrera o si alguien más abandona antes que él, la FIA te castiga con **-2 Puntos** sobre el total de tu carrera por andar de salado. 
-        * 🛡️ **Tip de cobardes:** Dejar el espacio en blanco o decir "Nadie" es totalmente válido y te salva de los puntos negativos. Cero riesgo, cero ganancia.
-        """)
-
+        st.warning("Esta apuesta es **OPCIONAL**.\n* ✅ **Si Acertaste:** Si tu piloto es el primero en abandonar, eres un genio del mal y te llevas **+5 Puntos** directos.\n* ❌ **Si Fallaste:** Si sobrevive o alguien más abandona antes, te castigamos con **-2 Puntos**.\n* 🛡️ **Tip:** Dejar el espacio en blanco es totalmente válido y te salva de perder puntos.")
         st.markdown("### ⚖️ ARTÍCULO 4: El Director de Carrera es Dios")
-        st.error("Los resultados son inyectados directamente por la telemetría oficial de la **API de la Fórmula 1** y validados por el mismísimo **Sasian**. Si la app dice que sacaste 0, sacaste 0. Cualquier queja, reclamo o berrinche será ignorado olímpicamente. La decisión final es absoluta e inapelable.")
+        st.error("Los resultados son inyectados directamente por la telemetría oficial de la API y validados por el mismísimo **Sasian**. La decisión final es absoluta e inapelable.")
 
-    # --- PANTALLA: ADMIN FIA ---
     elif menu == "👑 Admin FIA":
         st.subheader("Control del Director de Carrera")
         if st.button("⚡ Extraer Telemetría API"):
@@ -262,12 +220,10 @@ else:
             idx1 = pilotos.index(st.session_state['auto_c1']) if st.session_state['auto_c1'] in pilotos else None
             idx2 = pilotos.index(st.session_state['auto_c2']) if st.session_state['auto_c2'] in pilotos else None
             idx3 = pilotos.index(st.session_state['auto_c3']) if st.session_state['auto_c3'] in pilotos else None
-            
             c1, c2, c3 = st.columns(3)
             with c1: rq1 = st.selectbox("Pole Real:", pilotos)
             with c2: rvr = st.selectbox("VR Real:", pilotos)
             with c3: rab = st.selectbox("Salado Real:", pilotos)
-            
             st.write("---")
             c4, c5, c6 = st.columns(3)
             with c4: rg1 = st.selectbox("P1 Carrera:", pilotos, index=idx1)
@@ -285,11 +241,9 @@ else:
                         if ap['Carrera_P3'] == rg3: p += 3
                         if ap['Qualy_P1'] == rq1: p += 3
                         if ap['Vuelta_Rapida'] == rvr: p += 2
-                        
                         s_ap = str(ap.get('Primer_Abandono', '')).strip()
                         if s_ap != "" and s_ap != "🔒 CERRADO":
                             if s_ap == rab: p += 5
                             else: p -= 2
-                            
                         tabla_quinielas.update_cell(i, 12, p)
                 st.success("🏆 ¡Puntos actualizados en la base de datos!")
