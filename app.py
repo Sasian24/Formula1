@@ -96,7 +96,7 @@ else:
         </div>
     """, unsafe_allow_html=True)
 
-    if menu == "📝 Hacer Apuesta":
+if menu == "📝 Hacer Apuesta":
         st.subheader("Tu Pronóstico Oficial")
         df_cal = pd.DataFrame(tabla_calendario.get_all_records())
         gp_sel = st.selectbox("🌎 Selecciona Gran Premio:", carreras, index=None, placeholder="Elige un Gran Premio...")
@@ -123,36 +123,58 @@ else:
                     f_carrera_str = dt_c.strftime("%H:%M  %d-%m-%Y")
                     if ahora < (dt_c - timedelta(hours=1)): bc = False
 
+            # --- MAGIA: BUSCAR APUESTA PREVIA (PARQUE CERRADO) ---
+            datos_q = tabla_quinielas.get_all_records()
+            df_q = pd.DataFrame(datos_q) if datos_q else pd.DataFrame()
+            apuesta_previa = {}
+            ya_aposto = False
+            
+            if not df_q.empty and 'Jugador' in df_q.columns and 'Carrera' in df_q.columns:
+                filtro = df_q[(df_q['Jugador'] == st.session_state['usuario_activo']) & (df_q['Carrera'] == gp_sel)]
+                if not filtro.empty:
+                    apuesta_previa = filtro.iloc[-1].to_dict()
+                    ya_aposto = True
+                    st.info("💡 Ya tienes una quiniela registrada para esta carrera (Regla de Parque Cerrado). Aquí están tus pronósticos:")
+
+            # Función para que las cajas de selección recuerden a los pilotos
+            def get_idx(campo):
+                if ya_aposto and campo in apuesta_previa and apuesta_previa[campo] in pilotos:
+                    return pilotos.index(apuesta_previa[campo])
+                return None
+
             with st.form("apuesta_form"):
                 st.markdown(f"### ⏱️ Calificación (Cierre 1 hr antes de: {f_qualy_str})")
                 c1, c2, c3 = st.columns(3)
-                with c1: q1 = st.selectbox("PP1 (Pole):", pilotos, index=None, disabled=bq, placeholder="Elige piloto...")
-                with c2: q2 = st.selectbox("PP2:", pilotos, index=None, disabled=bq, placeholder="Elige piloto...")
-                with c3: q3 = st.selectbox("PP3:", pilotos, index=None, disabled=bq, placeholder="Elige piloto...")
+                with c1: q1 = st.selectbox("PP1 (Pole):", pilotos, index=get_idx('Qualy_P1'), disabled=bq or ya_aposto, placeholder="Elige piloto...")
+                with c2: q2 = st.selectbox("PP2:", pilotos, index=get_idx('Qualy_P2'), disabled=bq or ya_aposto, placeholder="Elige piloto...")
+                with c3: q3 = st.selectbox("PP3:", pilotos, index=get_idx('Qualy_P3'), disabled=bq or ya_aposto, placeholder="Elige piloto...")
                 
                 st.write("---")
                 
                 st.markdown(f"### 🏁 Carrera (Cierre 1 hr antes de: {f_carrera_str})")
                 c4, c5, c6 = st.columns(3)
-                with c4: g1 = st.selectbox("Ganador (P1):", pilotos, index=None, disabled=bc, placeholder="Elige piloto...")
-                with c5: g2 = st.selectbox("P2:", pilotos, index=None, disabled=bc, placeholder="Elige piloto...")
-                with c6: g3 = st.selectbox("P3:", pilotos, index=None, disabled=bc, placeholder="Elige piloto...")
+                with c4: g1 = st.selectbox("Ganador (P1):", pilotos, index=get_idx('Carrera_P1'), disabled=bc or ya_aposto, placeholder="Elige piloto...")
+                with c5: g2 = st.selectbox("P2:", pilotos, index=get_idx('Carrera_P2'), disabled=bc or ya_aposto, placeholder="Elige piloto...")
+                with c6: g3 = st.selectbox("P3:", pilotos, index=get_idx('Carrera_P3'), disabled=bc or ya_aposto, placeholder="Elige piloto...")
                 
                 st.write("---")
                 
                 st.markdown("### 🎲 Bonos Especiales")
                 b1, b2 = st.columns(2)
-                with b1: vr = st.selectbox("🚀 Vuelta Rápida:", pilotos, index=None, disabled=bc, placeholder="Elige piloto...")
-                with b2: ab = st.selectbox("💥 Primer Abandono (Opcional):", pilotos, index=None, disabled=bc, placeholder="Elige piloto o deja en blanco...")
+                with b1: vr = st.selectbox("🚀 Vuelta Rápida:", pilotos, index=get_idx('Vuelta_Rapida'), disabled=bc or ya_aposto, placeholder="Elige piloto...")
+                with b2: ab = st.selectbox("💥 Primer Abandono (Opcional):", pilotos, index=get_idx('Primer_Abandono'), disabled=bc or ya_aposto, placeholder="Elige piloto o deja en blanco...")
                 
-                if st.form_submit_button("🏎️ Sellar Apuesta"):
-                    if bq and bc:
-                        st.error("🔒 El candado de la FIA ya cayó. Los pits están cerrados para esta sesión.")
-                    else:
-                        v_ab = "🔒 CERRADO" if bc else (ab if ab else "")
-                        fila = [datetime.now().strftime("%Y-%m-%d %H:%M:%S"), st.session_state['usuario_activo'], gp_sel, q1, q2, q3, g1, g2, g3, vr, v_ab, 0]
-                        tabla_quinielas.append_row(fila)
-                        st.success("✅ ¡Apuesta sellada y registrada! Suerte.")
+                if ya_aposto:
+                    st.form_submit_button("🔒 Apuesta en Parque Cerrado", disabled=True)
+                else:
+                    if st.form_submit_button("🏎️ Sellar Apuesta"):
+                        if bq and bc:
+                            st.error("🔒 El candado de la FIA ya cayó. Los pits están cerrados para esta sesión.")
+                        else:
+                            v_ab = "🔒 CERRADO" if bc else (ab if ab else "")
+                            fila = [ahora.strftime("%Y-%m-%d %H:%M:%S"), st.session_state['usuario_activo'], gp_sel, q1, q2, q3, g1, g2, g3, vr, v_ab, 0]
+                            tabla_quinielas.append_row(fila)
+                            st.success("✅ ¡Apuesta sellada y registrada! Refresca la página para verla en Parque Cerrado.")
                         st.balloons()
 
     elif menu == "🏆 El Paddock":
