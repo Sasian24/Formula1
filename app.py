@@ -133,7 +133,7 @@ else:
     
     with st.sidebar:
         st.markdown(f"### 🏎️ Pits: {st.session_state['usuario_activo']}")
-        opciones = ["📝 Hacer Apuesta", "🏆 El Paddock"]
+        opciones = ["📝 Hacer Apuesta", "🏆 El Paddock", "📊 Paddock Detallado"]
         if es_admin: 
             opciones.append("👑 Admin FIA")
         opciones.append("📖 Reglamento Oficial")
@@ -215,6 +215,52 @@ else:
                 res['🛡️'] = res['Escuderia_Favorita'].map(url_logos).fillna(url_logos["Cadillac"])
             st.dataframe(res[['🛡️', 'Jugador', 'Puntos_Totales']], use_container_width=True, hide_index=True, column_config={"🛡️": st.column_config.ImageColumn("")})
 
+    elif menu == "📊 Paddock Detallado":
+        st.subheader("🔍 Análisis de Telemetría (Paddock Detallado)")
+        df_q = pd.DataFrame(tabla_quinielas.get_all_records())
+        
+        if df_q.empty:
+            st.info("Aún no hay telemetría registrada en el servidor.")
+        else:
+            opcion_ver = st.selectbox("Selecciona la vista a analizar:", ["🏆 Total del Campeonato"] + carreras)
+            
+            if opcion_ver == "🏆 Total del Campeonato":
+                df_q['Puntos_Totales'] = pd.to_numeric(df_q['Puntos_Totales'], errors='coerce').fillna(0)
+                res = df_q.groupby('Jugador')['Puntos_Totales'].sum().reset_index().sort_values('Puntos_Totales', ascending=False).reset_index(drop=True)
+                st.dataframe(res, use_container_width=True)
+            else:
+                df_filtro = df_q[df_q['Carrera'] == opcion_ver].copy()
+                if df_filtro.empty:
+                    st.warning(f"Ningún piloto ha metido su monoplaza a pits para el {opcion_ver} todavía.")
+                else:
+                    # Acortamos los nombres de los pilotos para que la tabla no sea kilométrica
+                    def acortar_nombre(nombre):
+                        if pd.isna(nombre) or nombre == "" or nombre == "🔒 CERRADO": return nombre
+                        partes = nombre.split()
+                        return partes[-1] if len(partes) > 1 else nombre
+                        
+                    columnas_apuestas = ["Qualy_P1", "Qualy_P2", "Qualy_P3", "Carrera_P1", "Carrera_P2", "Carrera_P3", "Vuelta_Rapida", "Piloto_Del_Dia", "Primer_Abandono"]
+                    for col in columnas_apuestas:
+                        if col in df_filtro.columns:
+                            df_filtro[col] = df_filtro[col].apply(acortar_nombre)
+
+                    # Renombrar columnas para que se vea como lo pediste
+                    df_filtro = df_filtro.rename(columns={
+                        "Qualy_P1": "Q1", "Qualy_P2": "Q2", "Qualy_P3": "Q3",
+                        "Carrera_P1": "P1", "Carrera_P2": "P2", "Carrera_P3": "P3",
+                        "Vuelta_Rapida": "VR", "Piloto_Del_Dia": "PD",
+                        "Primer_Abandono": "Salado", "Puntos_Totales": "Pts"
+                    })
+                    
+                    # Filtramos solo las columnas que importan para la vista detallada
+                    cols_mostrar = ['Jugador']
+                    cols_deseadas = ['Q1', 'Q2', 'Q3', 'P1', 'P2', 'P3', 'VR', 'PD', 'Salado', 'Pts']
+                    for c in cols_deseadas:
+                        if c in df_filtro.columns:
+                            cols_mostrar.append(c)
+                    
+                    st.dataframe(df_filtro[cols_mostrar], use_container_width=True, hide_index=True)
+
     elif menu == "📖 Reglamento Oficial":
         st.header("📜 REGLAMENTO DEPORTIVO SASIANGP 2026")
         st.write("Bienvenidos a la máxima categoría. Aquí venimos a apostar el honor, no a hacer amigos. Lean las reglas a detalle para que luego no anden llorando por los rincones exigiendo puntos que no se ganaron.")
@@ -272,7 +318,6 @@ else:
                     if ap['Carrera'] == sel_car:
                         p = 0
                         
-                        # --- CÁLCULO CARRERA (+3 exacto, +1 desorden) ---
                         podio_carrera = [rg1, rg2, rg3]
                         if ap['Carrera_P1'] == rg1: p += 3
                         elif ap['Carrera_P1'] in podio_carrera: p += 1
@@ -283,7 +328,6 @@ else:
                         if ap['Carrera_P3'] == rg3: p += 3
                         elif ap['Carrera_P3'] in podio_carrera: p += 1
 
-                        # --- CÁLCULO QUALY (+3 exacto, +1 desorden) ---
                         podio_qualy = [rq1, rq2, rq3]
                         if ap['Qualy_P1'] == rq1: p += 3
                         elif ap['Qualy_P1'] in podio_qualy: p += 1
@@ -294,7 +338,6 @@ else:
                         if ap.get('Qualy_P3') == rq3: p += 3
                         elif ap.get('Qualy_P3') in podio_qualy: p += 1
 
-                        # --- CÁLCULO BONOS ---
                         if ap['Vuelta_Rapida'] == rvr: p += 2
                         if ap.get('Piloto_Del_Dia') == rpd: p += 2
                         
@@ -303,6 +346,5 @@ else:
                             if s_ap == rab: p += 5
                             else: p -= 2
                         
-                        # Guardar en la columna 13 (Puntos Totales)
                         tabla_quinielas.update_cell(i, 13, p)
                 st.success("🏆 ¡Puntos calculados y actualizados en la base de datos!")
