@@ -136,7 +136,7 @@ else:
         gp_sel = st.selectbox("🌎 Selecciona Gran Premio:", carreras, index=None, placeholder="Elige un Gran Premio...")
         
         if gp_sel:
-            # --- EXCEPCIÓN DEL DIRECTOR DE CARRERA: PITS Y PARQUE CERRADO ABIERTOS POR HOY ---
+            # --- EXCEPCIÓN DEL DIRECTOR DE CARRERA: PITS ABIERTOS POR HOY ---
             bq, bc = False, False 
             
             df_q = pd.DataFrame(tabla_quinielas.get_all_records())
@@ -145,14 +145,13 @@ else:
                 filtro = df_q[(df_q['Jugador'] == st.session_state['usuario_activo']) & (df_q['Carrera'] == gp_sel)]
                 if not filtro.empty:
                     ya_aposto, ap_p = True, filtro.iloc[-1].to_dict()
-                    st.info("💡 Detecté una prueba guardada, pero los candados están apagados. Puedes capturar libremente.")
+                    st.info("💡 Detecté una prueba guardada, pero los candados están apagados por hoy. Puedes capturar libremente.")
 
             def get_idx(campo):
                 return pilotos.index(ap_p[campo]) if ya_aposto and ap_p.get(campo) in pilotos else None
 
             with st.form("apuesta_form"):
                 st.markdown("### ⏱️ Calificación")
-                # Se restauran los 3 lugares de calificación
                 q1_col, q2_col, q3_col = st.columns(3)
                 with q1_col: q1 = st.selectbox("PP1 (Pole):", pilotos, index=get_idx('Qualy_P1'), disabled=bq)
                 with q2_col: q2 = st.selectbox("Qualy P2:", pilotos, index=get_idx('Qualy_P2'), disabled=bq)
@@ -171,12 +170,17 @@ else:
                 with b2: ab = st.selectbox("💥 Primer Abandono (Opcional):", pilotos, index=get_idx('Primer_Abandono'), disabled=bc)
                 
                 if st.form_submit_button("🏎️ Sellar Apuesta / Actualizar"):
-                    v_ab = "🔒 CERRADO" if bc else (ab if ab else "")
-                    # Se envían los 3 datos de Qualy a la base de datos (q1, q2, q3)
-                    fila = [(datetime.utcnow()-timedelta(hours=6)).strftime("%Y-%m-%d %H:%M:%S"), st.session_state['usuario_activo'], gp_sel, q1, q2, q3, g1, g2, g3, vr, v_ab, 0]
-                    tabla_quinielas.append_row(fila)
-                    st.success("✅ ¡Apuesta sellada con éxito!")
-                    st.rerun()
+                    # --- VALIDACIÓN DE PILOTOS REPETIDOS (LA BANDERA NEGRA) ---
+                    if len(set([q1, q2, q3])) < 3:
+                        st.error("❌ ¡Bandera Negra! Tienes pilotos repetidos en la Calificación. Selecciona 3 distintos.")
+                    elif len(set([g1, g2, g3])) < 3:
+                        st.error("❌ ¡Bandera Negra! Tienes pilotos repetidos en el podio de la Carrera. Selecciona 3 distintos.")
+                    else:
+                        v_ab = "🔒 CERRADO" if bc else (ab if ab else "")
+                        fila = [(datetime.utcnow()-timedelta(hours=6)).strftime("%Y-%m-%d %H:%M:%S"), st.session_state['usuario_activo'], gp_sel, q1, q2, q3, g1, g2, g3, vr, v_ab, 0]
+                        tabla_quinielas.append_row(fila)
+                        st.success("✅ ¡Apuesta sellada con éxito!")
+                        st.rerun()
 
     elif menu == "🏆 El Paddock":
         st.subheader("Clasificación Mundial del Campeonato")
