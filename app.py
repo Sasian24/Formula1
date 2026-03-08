@@ -80,7 +80,7 @@ if st.session_state['usuario_activo'] is None:
         nuevo_p = st.text_input("Crea tu Contraseña:", type="password", key="reg_pass")
         escuderia = st.selectbox("Selecciona tu Escudería:", list(url_logos.keys()), key="reg_team")
         
-        if st.button("✍️ Firmar Contrato"):
+if st.button("✍️ Firmar Contrato"):
             df_j = pd.DataFrame(tabla_jugadores.get_all_records())
             nombres_existentes = df_j['Nombre'].astype(str).str.strip().tolist() if not df_j.empty else []
             
@@ -89,8 +89,16 @@ if st.session_state['usuario_activo'] is None:
             elif nuevo_u.strip() in nombres_existentes:
                 st.error("❌ Ese Alias ya está ocupado por otro piloto.")
             else:
-                tabla_jugadores.append_row([nuevo_u.strip(), nuevo_p.strip(), escuderia])
-                st.success(f"✅ ¡Bienvenido a la F1, {nuevo_u}! Ahora ve a la pestaña de 'Acceso' para entrar.")
+                # Armamos la fila con las 9 columnas exactas que tienes en el Excel
+                # A: Fecha | B: Nombre | C: Password | D: WhatsApp | E: Correo | F: Cumpleaños | G: Piloto_Fav | H: Foto | I: Escuderia
+                ahora_mx = datetime.utcnow() - timedelta(hours=6)
+                fecha_ins = ahora_mx.strftime("%Y-%m-%d %H:%M")
+                
+                # Dejamos vacíos los campos que no pedimos en el registro simple para no romper la tabla
+                fila_jugador = [fecha_ins, nuevo_u.strip(), nuevo_p.strip(), "", "", "", "", "", escuderia]
+                
+                tabla_jugadores.append_row(fila_jugador)
+                st.success(f"✅ ¡Bienvenido, {nuevo_u}! Datos sincronizados. Ya puedes ir a 'Acceso'.")
                 st.balloons()
 
     with tab3:
