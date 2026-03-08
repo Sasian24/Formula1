@@ -118,10 +118,10 @@ else:
                 
                 if pd.notna(dt_q): 
                     f_qualy_str = dt_q.strftime("%H:%M  %d-%m-%Y")
-                    if ahora < (dt_q - timedelta(hours=1)): bq = False
+                    if ahora < (dt_q + timedelta(hours=1)): bq = False
                 if pd.notna(dt_c): 
                     f_carrera_str = dt_c.strftime("%H:%M  %d-%m-%Y")
-                    if ahora < (dt_c - timedelta(hours=1)): bc = False
+                    if ahora < (dt_c + timedelta(hours=1)): bc = False
 
             # --- MAGIA: BUSCAR APUESTA PREVIA (PARQUE CERRADO) ---
             datos_q = tabla_quinielas.get_all_records()
