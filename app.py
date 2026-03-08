@@ -101,7 +101,7 @@ else:
             st.session_state['usuario_activo'] = None
             st.rerun()
 
-    # --- BANNER ORIGINAL RESTAURADO ---
+    # --- BANNER ORIGINAL RESTAURADO (CONGELADO) ---
     st.markdown("""
         <div style="display: flex; justify-content: space-between; align-items: center; background: #1e1e1e; padding: 10px 20px; border-radius: 12px; border-bottom: 4px solid #E10600; margin-bottom: 20px;">
             <span style="font-size: 2.5rem;">🏁</span>
@@ -152,22 +152,41 @@ else:
                     st.rerun()
 
     elif menu == "🏆 El Paddock":
+        st.subheader("Clasificación Mundial del Campeonato")
         df_q = pd.DataFrame(tabla_quinielas.get_all_records())
         df_j = pd.DataFrame(tabla_jugadores.get_all_records())
         if not df_q.empty:
             df_q['Puntos_Totales'] = pd.to_numeric(df_q['Puntos_Totales'], errors='coerce').fillna(0)
-            res = df_q.groupby('Jugador')['Puntos_Totales'].sum().reset_index().sort_values('Puntos_Totales', ascending=False).reset_index(drop=True)
+            res = df_q.groupby('Jugador')['Puntos_Totales'].sum().reset_index()
             if not df_j.empty:
                 res = res.merge(df_j[['Nombre', 'Escuderia_Favorita']], left_on='Jugador', right_on='Nombre', how='left')
                 res['🛡️'] = res['Escuderia_Favorita'].map(url_logos).fillna(url_logos["Cadillac"])
-            st.dataframe(res[['🛡️', 'Jugador', 'Puntos_Totales']], use_container_width=True, hide_index=True, column_config={"🛡️": st.column_config.ImageColumn("")})
+                res = res.rename(columns={'Jugador': 'Piloto', 'Escuderia_Favorita': 'Escudería', 'Puntos_Totales': 'Puntos'})
+                res = res[['🛡️', 'Piloto', 'Escudería', 'Puntos']]
+            else:
+                res = res.rename(columns={'Jugador': 'Piloto', 'Puntos_Totales': 'Puntos'})
+                
+            res = res.sort_values('Puntos', ascending=False).reset_index(drop=True)
+            st.dataframe(res, use_container_width=True, hide_index=True, column_config={"🛡️": st.column_config.ImageColumn("")})
 
     elif menu == "📊 Paddock Detallado":
         df_q = pd.DataFrame(tabla_quinielas.get_all_records())
         if not df_q.empty:
             op_v = st.selectbox("Ver:", ["🏆 Total"] + lista_carreras_oficial)
             if op_v == "🏆 Total":
-                st.dataframe(df_q.groupby('Jugador')['Puntos_Totales'].sum().reset_index().sort_values('Puntos_Totales', ascending=False), use_container_width=True)
+                df_j = pd.DataFrame(tabla_jugadores.get_all_records())
+                df_q['Puntos_Totales'] = pd.to_numeric(df_q['Puntos_Totales'], errors='coerce').fillna(0)
+                res = df_q.groupby('Jugador')['Puntos_Totales'].sum().reset_index()
+                
+                if not df_j.empty:
+                    res = res.merge(df_j[['Nombre', 'Escuderia_Favorita']], left_on='Jugador', right_on='Nombre', how='left')
+                    res = res.rename(columns={'Jugador': 'Piloto', 'Escuderia_Favorita': 'Escudería', 'Puntos_Totales': 'Puntos'})
+                    res = res[['Piloto', 'Escudería', 'Puntos']]
+                else:
+                    res = res.rename(columns={'Jugador': 'Piloto', 'Puntos_Totales': 'Puntos'})
+                    
+                res = res.sort_values('Puntos', ascending=False).reset_index(drop=True)
+                st.dataframe(res, use_container_width=True, hide_index=True)
             else:
                 df_f = df_q[df_q['Carrera'] == op_v].copy()
                 if not df_f.empty:
@@ -189,6 +208,10 @@ else:
                     cols_mostrar = ['Jugador'] + list(rename_dict.values())
                     df_mostrar = df_f[[c for c in cols_mostrar if c in df_f.columns]].copy()
                     
+                    if 'Pts' in df_mostrar.columns:
+                        df_mostrar['Pts'] = pd.to_numeric(df_mostrar['Pts'], errors='coerce').fillna(0)
+                        df_mostrar = df_mostrar.sort_values('Pts', ascending=False).reset_index(drop=True)
+                    
                     def style_txt(row):
                         styles = [''] * len(row)
                         for i, col in enumerate(row.index):
@@ -206,6 +229,7 @@ else:
                     st.dataframe(df_mostrar.style.apply(style_txt, axis=1).set_properties(**{'text-align': 'center'}, subset=df_mostrar.columns[1:]), use_container_width=True, hide_index=True)
 
     elif menu == "📖 Reglamento Oficial":
+        # --- REGLAMENTO ORIGINAL CONGELADO ---
         st.header("📜 REGLAMENTO DEPORTIVO SASIANGP 2026")
         st.markdown("---")
         st.markdown("### ⏱️ ARTÍCULO 1: El Reloj No Perdona")
@@ -226,7 +250,6 @@ else:
     elif menu == "👑 Admin FIA":
         sel_car = st.selectbox("Gran Premio a Dictaminar:", lista_carreras_oficial)
         
-        # MEMORIA DE ADMIN FIA RESTAURADA
         todos_resultados = tabla_resultados.get_all_values()
         res_previos = {}
         for fila in reversed(todos_resultados):
