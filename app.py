@@ -24,17 +24,35 @@ url_logos = {
     "Aston Martin": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/aston-martin.png",
     "Alpine": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/alpine.png",
     "Williams": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/williams.png",
-    "RB": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/rb.png",
-    "Kick Sauber": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/sauber.png",
+    "Racing Bulls": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/rb.png",
+    "Audi": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/sauber.png",
     "Haas": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/haas.png",
     "Cadillac": "https://www.google.com/s2/favicons?sz=128&domain=cadillac.com"
 }
 
-pilotos = sorted(["Checo Pérez", "Max Verstappen", "Charles Leclerc", "Lewis Hamilton", "Lando Norris", "Oscar Piastri", "George Russell", "Fernando Alonso", "Carlos Sainz", "Franco Colapinto", "Nico Hülkenberg", "Esteban Ocon", "Pierre Gasly", "Alex Albon", "Yuki Tsunoda", "Lance Stroll"])
+# La parrilla oficial de 22 pilotos para 2026
+pilotos = sorted([
+    "Checo Pérez", "Max Verstappen", "Charles Leclerc", "Lewis Hamilton", 
+    "Lando Norris", "Oscar Piastri", "George Russell", "Fernando Alonso", 
+    "Carlos Sainz", "Franco Colapinto", "Nico Hülkenberg", "Esteban Ocon", 
+    "Pierre Gasly", "Alex Albon", "Lance Stroll", "Valtteri Bottas",
+    "Arvid Lindblad", "Isack Hadjar", "Kimi Antonelli", "Oliver Bearman", 
+    "Liam Lawson", "Gabriel Bortoleto"
+])
+
 carreras = ["1. GP de Australia (Marzo)", "2. GP de China (Marzo)", "3. GP de Japón (Marzo)", "4. GP de Bahréin (Abril)", "5. GP de Arabia Saudita (Abril)", "6. GP de Miami (Mayo)", "7. GP de Canadá (Mayo)", "8. GP de Mónaco (Junio)", "9. GP de España - Barcelona (Junio)", "10. GP de Austria (Junio)", "11. GP de Gran Bretaña (Julio)", "12. GP de Bélgica (Julio)", "13. GP de Hungría (Julio)", "14. GP de Países Bajos (Agosto)", "15. GP de Italia - Monza (Septiembre)", "16. GP de España - Madrid (Septiembre)", "17. GP de Azerbaiyán (Septiembre)", "18. GP de Singapur (Octubre)", "19. GP de Estados Unidos - Austin (Octubre)", "20. GP de México (Oct-Nov)", "21. GP de Brasil (Noviembre)", "22. GP de Las Vegas (Noviembre)", "23. GP de Qatar (Noviembre)", "24. GP de Abu Dhabi (Diciembre)"]
 
-traductor_api = {"Verstappen": "Max Verstappen", "Perez": "Checo Pérez", "Leclerc": "Charles Leclerc", "Norris": "Lando Norris", "Sainz": "Carlos Sainz", "Hamilton": "Lewis Hamilton", "Russell": "George Russell", "Piastri": "Oscar Piastri", "Alonso": "Fernando Alonso", "Colapinto": "Franco Colapinto"}
-
+# Traductor actualizado para que la API de la FIA reconozca a los novatos
+traductor_api = {
+    "Verstappen": "Max Verstappen", "Perez": "Checo Pérez", "Leclerc": "Charles Leclerc", 
+    "Norris": "Lando Norris", "Sainz": "Carlos Sainz", "Hamilton": "Lewis Hamilton", 
+    "Russell": "George Russell", "Piastri": "Oscar Piastri", "Alonso": "Fernando Alonso", 
+    "Colapinto": "Franco Colapinto", "Lindblad": "Arvid Lindblad", "Hadjar": "Isack Hadjar",
+    "Antonelli": "Kimi Antonelli", "Bearman": "Oliver Bearman", "Lawson": "Liam Lawson",
+    "Bortoleto": "Gabriel Bortoleto", "Hülkenberg": "Nico Hülkenberg", "Hulkenberg": "Nico Hülkenberg",
+    "Ocon": "Esteban Ocon", "Gasly": "Pierre Gasly", "Albon": "Alex Albon", 
+    "Stroll": "Lance Stroll", "Bottas": "Valtteri Bottas"
+}
 # --- 4. GESTIÓN DE SESIÓN ---
 if 'usuario_activo' not in st.session_state: 
     st.session_state['usuario_activo'] = None
@@ -134,8 +152,12 @@ else:
 
             with st.form("apuesta_form"):
                 st.markdown("### ⏱️ Calificación")
-                # Quitamos por completo el "or ya_aposto" para que no bloquee las cajas
-                q1 = st.selectbox("PP1 (Pole):", pilotos, index=get_idx('Qualy_P1'), disabled=bq)
+                # Se restauran los 3 lugares de calificación
+                q1_col, q2_col, q3_col = st.columns(3)
+                with q1_col: q1 = st.selectbox("PP1 (Pole):", pilotos, index=get_idx('Qualy_P1'), disabled=bq)
+                with q2_col: q2 = st.selectbox("Qualy P2:", pilotos, index=get_idx('Qualy_P2'), disabled=bq)
+                with q3_col: q3 = st.selectbox("Qualy P3:", pilotos, index=get_idx('Qualy_P3'), disabled=bq)
+                
                 st.write("---")
                 st.markdown("### 🏁 Carrera")
                 c4, c5, c6 = st.columns(3)
@@ -150,7 +172,8 @@ else:
                 
                 if st.form_submit_button("🏎️ Sellar Apuesta / Actualizar"):
                     v_ab = "🔒 CERRADO" if bc else (ab if ab else "")
-                    fila = [(datetime.utcnow()-timedelta(hours=6)).strftime("%Y-%m-%d %H:%M:%S"), st.session_state['usuario_activo'], gp_sel, q1, "", "", g1, g2, g3, vr, v_ab, 0]
+                    # Se envían los 3 datos de Qualy a la base de datos (q1, q2, q3)
+                    fila = [(datetime.utcnow()-timedelta(hours=6)).strftime("%Y-%m-%d %H:%M:%S"), st.session_state['usuario_activo'], gp_sel, q1, q2, q3, g1, g2, g3, vr, v_ab, 0]
                     tabla_quinielas.append_row(fila)
                     st.success("✅ ¡Apuesta sellada con éxito!")
                     st.rerun()
@@ -200,18 +223,26 @@ else:
             idx2 = pilotos.index(st.session_state['auto_c2']) if st.session_state['auto_c2'] in pilotos else None
             idx3 = pilotos.index(st.session_state['auto_c3']) if st.session_state['auto_c3'] in pilotos else None
 
+            st.markdown("### ⏱️ Resultados Calificación")
+            cq1, cq2, cq3 = st.columns(3)
+            with cq1: rq1 = st.selectbox("Pole Real (Q1):", pilotos)
+            with cq2: rq2 = st.selectbox("Q2 Real:", pilotos)
+            with cq3: rq3 = st.selectbox("Q3 Real:", pilotos)
+            
+            st.markdown("### 🏁 Resultados Carrera")
             c1, c2, c3 = st.columns(3)
-            with c1: rq1 = st.selectbox("Pole Real:", pilotos)
-            with c2: rvr = st.selectbox("VR Real:", pilotos)
-            with c3: rab = st.selectbox("Salado Real:", pilotos)
-            st.write("---")
-            c4, c5, c6 = st.columns(3)
-            with c4: rg1 = st.selectbox("P1 Carrera:", pilotos, index=idx1)
-            with c5: rg2 = st.selectbox("P2 Carrera:", pilotos, index=idx2)
-            with c6: rg3 = st.selectbox("P3 Carrera:", pilotos, index=idx3)
+            with c1: rg1 = st.selectbox("P1 Real:", pilotos, index=idx1)
+            with c2: rg2 = st.selectbox("P2 Real:", pilotos, index=idx2)
+            with c3: rg3 = st.selectbox("P3 Real:", pilotos, index=idx3)
+            
+            st.markdown("### 🎲 Bonos")
+            b1, b2 = st.columns(2)
+            with b1: rvr = st.selectbox("VR Real:", pilotos)
+            with b2: rab = st.selectbox("Salado Real:", pilotos)
 
             if st.form_submit_button("⚖️ Repartir Puntos"):
-                tabla_resultados.append_row([sel_car, rq1, "", "", rg1, rg2, rg3, rvr, rab])
+                # Se envían los 3 datos de Qualy al registro de resultados
+                tabla_resultados.append_row([sel_car, rq1, rq2, rq3, rg1, rg2, rg3, rvr, rab])
                 aps = tabla_quinielas.get_all_records()
                 for i, ap in enumerate(aps, start=2):
                     if ap['Carrera'] == sel_car:
