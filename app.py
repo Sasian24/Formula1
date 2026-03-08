@@ -192,10 +192,9 @@ else:
                 res = res.rename(columns={'Jugador': 'Piloto', 'Puntos_Totales': 'Puntos'})
                 
             res = res.sort_values('Puntos', ascending=False).reset_index(drop=True)
-            # PUNTOS CENTRADOS 
+            # Solucionado el error de st.column_config.NumberColumn que hacía crashear la app.
             st.dataframe(res, use_container_width=True, hide_index=True, column_config={
-                "🛡️": st.column_config.ImageColumn(""),
-                "Puntos": st.column_config.NumberColumn("Puntos", alignment="center")
+                "🛡️": st.column_config.ImageColumn("")
             })
 
     elif menu == "📊 Paddock Detallado":
@@ -216,10 +215,7 @@ else:
                     res = res.rename(columns={'Jugador': 'Piloto', 'Puntos_Totales': 'Puntos'})
                     
                 res = res.sort_values('Puntos', ascending=False).reset_index(drop=True)
-                # PUNTOS CENTRADOS
-                st.dataframe(res, use_container_width=True, hide_index=True, column_config={
-                    "Puntos": st.column_config.NumberColumn("Puntos", alignment="center")
-                })
+                st.dataframe(res, use_container_width=True, hide_index=True)
             else:
                 st.markdown("""
                 <div style="text-align: center; margin: 10px 0px 20px 0px; font-size: 1.1rem; background-color: #1e1e1e; padding: 12px; border-radius: 8px; border: 1px solid #333;">
@@ -276,32 +272,40 @@ else:
                         return styles
                     
                     styled_df = df_mostrar.style.apply(style_txt, axis=1).set_properties(**{'text-align': 'center'}, subset=df_mostrar.columns[1:])
-                    # PUNTOS CENTRADOS
-                    st.dataframe(styled_df, use_container_width=True, hide_index=True, column_config={
-                        "Pts": st.column_config.NumberColumn("Pts", alignment="center")
-                    })
+                    st.dataframe(styled_df, use_container_width=True, hide_index=True)
 
     elif menu == "📖 Reglamento Oficial":
-        # --- REGLAMENTO ORIGINAL CONGELADO ---
+        # --- REGLAMENTO ORIGINAL CONGELADO Y RESTAURADO ---
         st.header("📜 REGLAMENTO DEPORTIVO SASIANGP 2026")
+        st.write("Bienvenidos a la máxima categoría. Aquí venimos a apostar el honor, no a hacer amigos. Lean las reglas a detalle para que luego no anden llorando por los rincones exigiendo puntos que no se ganaron.")
         st.markdown("---")
-        st.markdown("### ⏱️ ARTÍCULO 1: El Reloj No Perdona")
-        st.info("Pits cierran 1 hora antes de Qualy y 1 hora antes de Carrera.")
+        st.markdown("### ⏱️ ARTÍCULO 1: El Reloj No Perdona (Cierre de Pits)")
+        st.info("El sistema cuenta con un **Reloj Suizo** automático en formato de 24 hrs. \n* **Calificación (Qualy):** Se bloquea **EXACTAMENTE 1 HORA ANTES** de que los autos salgan a la pista.\n* **Carrera:** Se bloquea **EXACTAMENTE 1 HORA ANTES** del semáforo en verde.\n* **Excepciones:** NINGUNA. Si entras a la app 59 minutos antes, las cajitas estarán en gris y te vas con 0 puntos.")
+        
         st.markdown("### 🎯 ARTÍCULO 2: Sistema de Puntuación Detallado")
         st.success("""
-        **Calificación (Q1-Q3) y Carrera (P1-P3):**
-        * 🥇 **Posición Exacta:** **+3 Puntos**.
-        * 🥈 **Acierto Desordenado:** **+1 Punto** si tu piloto queda en el podio (Top 3) pero en otra posición.
+        Para las secciones de **Calificación (Q1, Q2, Q3)** y **Carrera (P1, P2, P3)**, el puntaje se calcula así:
+        * 🥇 **Posición Exacta:** **+3 Puntos** si aciertas al piloto en el lugar exacto que pronosticaste.
+        * 🥈 **Acierto Desordenado:** **+1 Punto** si tu piloto queda en el podio (Top 3 de Q o P) pero en una posición distinta a la que elegiste.
         
-        **Bonos:**
-        * 🚀 **Vuelta Rápida:** **+2 Puntos**.
-        * 🌟 **Piloto del Día:** **+2 Puntos**.
+        **Bonos Adicionales:**
+        * 🚀 **Vuelta Rápida:** **+2 Puntos** por acierto exacto.
+        * 🌟 **Piloto del Día:** **+2 Puntos** por acierto exacto.
         """)
+        
         st.markdown("### ☠️ ARTÍCULO 3: El Bono 'Salado' (Riesgo Extremo)")
-        st.warning("⚠️ **Opcional:** **+5 Puntos** si aciertas el primer abandono / **-2 Puntos** si fallas.")
+        st.warning("""
+        Esta apuesta es **OPCIONAL** (Puedes dejarla en 'Ninguno').
+        * ✅ **Si Acertaste:** Si tu piloto es el primero en abandonar, eres un genio del mal y te llevas **+5 Puntos** directos.
+        * ❌ **Si Fallaste:** Si sobrevive o alguien más abandona antes, la FIA te castiga con **-2 Puntos**.
+        """)
+        
+        st.markdown("### ⚖️ ARTÍCULO 4: El Director de Carrera es Dios")
+        st.error("Los resultados son inyectados directamente por la telemetría oficial de la API y validados por el mismísimo **Sasian**. La decisión final es absoluta e inapelable.")
 
     elif menu == "👑 Admin FIA":
         sel_car = st.selectbox("Gran Premio a Dictaminar:", lista_carreras_oficial)
+        
         todos_resultados = tabla_resultados.get_all_values()
         res_previos = {}
         for fila in reversed(todos_resultados):
@@ -313,11 +317,14 @@ else:
                 }
                 break
 
-        if res_previos: st.info("💡 Ya hay resultados oficiales guardados para esta carrera.")
+        if res_previos:
+            st.info("💡 Ya hay resultados oficiales guardados para esta carrera.")
 
         def get_idx_res(llave, d_v=None):
-            if res_previos and llave in res_previos and res_previos[llave] in pilotos: return pilotos.index(res_previos[llave])
-            if d_v in pilotos: return pilotos.index(d_v)
+            if res_previos and llave in res_previos and res_previos[llave] in pilotos: 
+                return pilotos.index(res_previos[llave])
+            if d_v in pilotos: 
+                return pilotos.index(d_v)
             return None
 
         if st.button("⚡ Cargar API"):
@@ -346,14 +353,21 @@ else:
             with b3: abr = st.selectbox("Abandono:", pilotos, index=get_idx_res('rab'), placeholder="Ninguno")
             
             if st.form_submit_button("⚖️ Repartir Puntos"):
-                v_rq1 = rq1 if rq1 else ""; v_rq2 = rq2 if rq2 else ""; v_rq3 = rq3 if rq3 else ""
-                v_rg1 = rg1 if rg1 else ""; v_rg2 = rg2 if rg2 else ""; v_rg3 = rg3 if rg3 else ""
-                v_rvr = rvr if rvr else ""; v_rpd = rpd if rpd else ""; v_abr = abr if abr else ""
+                v_rq1 = rq1 if rq1 else ""
+                v_rq2 = rq2 if rq2 else ""
+                v_rq3 = rq3 if rq3 else ""
+                v_rg1 = rg1 if rg1 else ""
+                v_rg2 = rg2 if rg2 else ""
+                v_rg3 = rg3 if rg3 else ""
+                v_rvr = rvr if rvr else ""
+                v_rpd = rpd if rpd else ""
+                v_abr = abr if abr else ""
 
                 tabla_resultados.append_row([sel_car, v_rq1, v_rq2, v_rq3, v_rg1, v_rg2, v_rg3, v_rvr, v_rpd, v_abr])
                 celdas = []; t_q = tabla_quinielas.get_all_values()
                 
-                podio_c = [v_rg1, v_rg2, v_rg3]; podio_q = [v_rq1, v_rq2, v_rq3]
+                podio_c = [v_rg1, v_rg2, v_rg3]
+                podio_q = [v_rq1, v_rq2, v_rq3]
                 
                 for idx, fila in enumerate(t_q[1:], start=2):
                     fila += [""] * (13 - len(fila))
