@@ -365,7 +365,8 @@ else:
                     html_det = '<table style="width:100%; text-align:center; border-collapse: collapse; font-family: sans-serif;">'
                     html_det += '<tr style="background-color: #2e2e3e; color: white;">'
                     for col in df_mostrar.columns:
-                        html_det += f'<th style="text-align:center; padding: 10px; border-bottom: 2px solid #E10600; vertical-align: bottom;">{col}</th>'
+                        titulo = "Piloto" if col == "Jugador" else col
+                        html_det += f'<th style="text-align:center; padding: 10px; border-bottom: 2px solid #E10600; vertical-align: bottom;">{titulo}</th>'
                     html_det += '</tr>'
 
                     for _, row in df_mostrar.iterrows():
