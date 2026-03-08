@@ -15,7 +15,7 @@ tabla_jugadores = sh.worksheet("Jugadores")
 tabla_resultados = sh.worksheet("Resultados") 
 tabla_calendario = sh.worksheet("Calendario") 
 
-# --- 3. LOGOS A PRUEBA DE BALAS ---
+# --- 3. LOGOS Y PILOTOS ---
 url_logos = {
     "Red Bull Racing": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/red-bull.png",
     "Ferrari": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/ferrari.png",
@@ -31,23 +31,9 @@ url_logos = {
 }
 
 pilotos = sorted(["Checo Pérez", "Max Verstappen", "Charles Leclerc", "Lewis Hamilton", "Lando Norris", "Oscar Piastri", "George Russell", "Fernando Alonso", "Carlos Sainz", "Franco Colapinto", "Nico Hülkenberg", "Esteban Ocon", "Pierre Gasly", "Alex Albon", "Yuki Tsunoda", "Lance Stroll"])
-carreras = [
-    "1. GP de Australia (Marzo)", "2. GP de China (Marzo)", "3. GP de Japón (Marzo)", 
-    "4. GP de Bahréin (Abril)", "5. GP de Arabia Saudita (Abril)", "6. GP de Miami (Mayo)", 
-    "7. GP de Canadá (Mayo)", "8. GP de Mónaco (Junio)", "9. GP de España - Barcelona (Junio)",
-    "10. GP de Austria (Junio)", "11. GP de Gran Bretaña (Julio)", "12. GP de Bélgica (Julio)", 
-    "13. GP de Hungría (Julio)", "14. GP de Países Bajos (Agosto)", "15. GP de Italia - Monza (Septiembre)", 
-    "16. GP de España - Madrid (Septiembre)", "17. GP de Azerbaiyán (Septiembre)", "18. GP de Singapur (Octubre)", 
-    "19. GP de Estados Unidos - Austin (Octubre)", "20. GP de México (Oct-Nov)", "21. GP de Brasil (Noviembre)", 
-    "22. GP de Las Vegas (Noviembre)", "23. GP de Qatar (Noviembre)", "24. GP de Abu Dhabi (Diciembre)"
-]
+carreras = ["1. GP de Australia (Marzo)", "2. GP de China (Marzo)", "3. GP de Japón (Marzo)", "4. GP de Bahréin (Abril)", "5. GP de Arabia Saudita (Abril)", "6. GP de Miami (Mayo)", "7. GP de Canadá (Mayo)", "8. GP de Mónaco (Junio)", "9. GP de España - Barcelona (Junio)", "10. GP de Austria (Junio)", "11. GP de Gran Bretaña (Julio)", "12. GP de Bélgica (Julio)", "13. GP de Hungría (Julio)", "14. GP de Países Bajos (Agosto)", "15. GP de Italia - Monza (Septiembre)", "16. GP de España - Madrid (Septiembre)", "17. GP de Azerbaiyán (Septiembre)", "18. GP de Singapur (Octubre)", "19. GP de Estados Unidos - Austin (Octubre)", "20. GP de México (Oct-Nov)", "21. GP de Brasil (Noviembre)", "22. GP de Las Vegas (Noviembre)", "23. GP de Qatar (Noviembre)", "24. GP de Abu Dhabi (Diciembre)"]
 
-traductor_api = {
-    "Verstappen": "Max Verstappen", "Perez": "Checo Pérez", "Leclerc": "Charles Leclerc",
-    "Norris": "Lando Norris", "Sainz": "Carlos Sainz", "Hamilton": "Lewis Hamilton",
-    "Russell": "George Russell", "Piastri": "Oscar Piastri", "Alonso": "Fernando Alonso",
-    "Colapinto": "Franco Colapinto"
-}
+traductor_api = {"Verstappen": "Max Verstappen", "Perez": "Checo Pérez", "Leclerc": "Charles Leclerc", "Norris": "Lando Norris", "Sainz": "Carlos Sainz", "Hamilton": "Lewis Hamilton", "Russell": "George Russell", "Piastri": "Oscar Piastri", "Alonso": "Fernando Alonso", "Colapinto": "Franco Colapinto"}
 
 # --- 4. GESTIÓN DE SESIÓN ---
 if 'usuario_activo' not in st.session_state: st.session_state['usuario_activo'] = None
@@ -61,86 +47,66 @@ if st.session_state['usuario_activo'] is None:
     
     with tab1:
         st.title("Acceso - SasianGP")
-        u = st.text_input("Alias de Piloto:", key="login_user")
-        p = st.text_input("Contraseña de Telemetría:", type="password", key="login_pass")
+        u = st.text_input("Alias de Piloto:", key="l_u")
+        p = st.text_input("Contraseña de Telemetría:", type="password", key="l_p")
         if st.button("🏁 Arrancar Motores"):
             df_j = pd.DataFrame(tabla_jugadores.get_all_records())
             if not df_j.empty:
                 df_j['Nombre'] = df_j['Nombre'].astype(str).str.strip()
                 df_j['Password'] = df_j['Password'].astype(str).str.strip()
-                user_match = df_j[(df_j['Nombre'] == u.strip()) & (df_j['Password'] == p.strip())]
-                if not user_match.empty:
+                if not df_j[(df_j['Nombre'] == u.strip()) & (df_j['Password'] == p.strip())].empty:
                     st.session_state['usuario_activo'] = u.strip()
                     st.rerun()
                 else: st.error("❌ Acceso Denegado. Piloto no registrado o contraseña inválida.")
 
     with tab2:
         st.title("Firma con la Escudería")
-        nuevo_u = st.text_input("Crea tu Alias de Piloto:", key="reg_user")
-        nuevo_p = st.text_input("Crea tu Contraseña:", type="password", key="reg_pass")
-        escuderia = st.selectbox("Selecciona tu Escudería:", list(url_logos.keys()), key="reg_team")
+        nu = st.text_input("Crea tu Alias de Piloto:", key="r_u")
+        np = st.text_input("Crea tu Contraseña:", type="password", key="r_p")
+        esc = st.selectbox("Selecciona tu Escudería:", list(url_logos.keys()), key="r_e")
         
-if st.button("✍️ Firmar Contrato"):
+        if st.button("✍️ Firmar Contrato"):
             df_j = pd.DataFrame(tabla_jugadores.get_all_records())
-            nombres_existentes = df_j['Nombre'].astype(str).str.strip().tolist() if not df_j.empty else []
-            
-            if not nuevo_u or not nuevo_p:
-                st.warning("⚠️ Debes llenar todos los campos para entrar a la parrilla.")
-            elif nuevo_u.strip() in nombres_existentes:
-                st.error("❌ Ese Alias ya está ocupado por otro piloto.")
+            existentes = df_j['Nombre'].astype(str).str.strip().tolist() if not df_j.empty else []
+            if not nu or not np:
+                st.warning("⚠️ Debes llenar todos los campos.")
+            elif nu.strip() in existentes:
+                st.error("❌ Ese Alias ya está ocupado.")
             else:
-                # Armamos la fila con las 9 columnas exactas que tienes en el Excel
-                # A: Fecha | B: Nombre | C: Password | D: WhatsApp | E: Correo | F: Cumpleaños | G: Piloto_Fav | H: Foto | I: Escuderia
                 ahora_mx = datetime.utcnow() - timedelta(hours=6)
-                fecha_ins = ahora_mx.strftime("%Y-%m-%d %H:%M")
-                
-                # Dejamos vacíos los campos que no pedimos en el registro simple para no romper la tabla
-                fila_jugador = [fecha_ins, nuevo_u.strip(), nuevo_p.strip(), "", "", "", "", "", escuderia]
-                
-                tabla_jugadores.append_row(fila_jugador)
-                st.success(f"✅ ¡Bienvenido, {nuevo_u}! Datos sincronizados. Ya puedes ir a 'Acceso'.")
+                # Sincronizado con tus 9 columnas: Fecha, Nombre, Pass, WhatsApp, Correo, Cumple, Piloto, Foto, Escuderia
+                fila_j = [ahora_mx.strftime("%Y-%m-%d %H:%M"), nu.strip(), np.strip(), "", "", "", "", "", esc]
+                tabla_jugadores.append_row(fila_j)
+                st.success(f"✅ ¡Bienvenido, {nu}! Ahora ve a 'Acceso' para entrar.")
                 st.balloons()
 
     with tab3:
         st.title("Recuperar Telemetría")
-        st.info("Escribe tu Alias y si estás en la base de datos, te recordaremos tu clave.")
-        user_olvido = st.text_input("Tu Alias de Piloto:", key="forgot_user")
+        uo = st.text_input("Tu Alias de Piloto:", key="f_u")
         if st.button("🔍 Buscar en el Paddock"):
             df_j = pd.DataFrame(tabla_jugadores.get_all_records())
             if not df_j.empty:
-                df_j['Nombre'] = df_j['Nombre'].astype(str).str.strip()
-                match = df_j[df_j['Nombre'] == user_olvido.strip()]
+                match = df_j[df_j['Nombre'].astype(str).str.strip() == uo.strip()]
                 if not match.empty:
-                    clave_recuperada = match.iloc[0]['Password']
-                    st.success(f"🔑 Tu contraseña es: **{clave_recuperada}**")
-                else:
-                    st.error("❓ Ese piloto no aparece en nuestros registros.")
+                    st.success(f"🔑 Tu contraseña es: **{match.iloc[0]['Password']}**")
+                else: st.error("❓ Ese piloto no aparece en nuestros registros.")
 
 # --- 6. APLICACIÓN PRINCIPAL ---
 else:
-    es_admin = st.session_state['usuario_activo'] == "Sasian"
+  es_admin = st.session_state['usuario_activo'] == "Sasian"
 
     with st.sidebar:
         st.markdown(f"### 🏎️ Pits: {st.session_state['usuario_activo']}")
         opciones = ["📝 Hacer Apuesta", "🏆 El Paddock"]
         if es_admin: opciones.append("👑 Admin FIA")
-        opciones.append("📖 Reglamento Oficial") 
-        
+        opciones.append("📖 Reglamento Oficial")
         menu = st.radio("Navegación", opciones)
         st.write("---")
         if st.button("🚪 Salir de Pits"):
             st.session_state['usuario_activo'] = None
             st.rerun()
 
-    st.markdown("""
-        <div style="display: flex; justify-content: space-between; align-items: center; background: #1e1e1e; padding: 15px; border-radius: 12px; margin-bottom: 25px; border-bottom: 4px solid #E10600; box-shadow: 0px 4px 10px rgba(0,0,0,0.5);">
-            <span style="font-size: 2.5rem;">🏁</span>
-            <div style="text-align: center;">
-                <span style="font-family: Impact; font-size: 3.5rem; font-style: italic; color: #E10600; letter-spacing: -1px;">F1<sup style="font-size: 1.2rem; color: #fff;">&reg; Sasian</sup></span>
-            </div>
-            <span style="font-size: 2.5rem;">🏁</span>
-        </div>
-    """, unsafe_allow_html=True)
+    st.markdown("""<div style="text-align: center; background: #1e1e1e; padding: 10px; border-radius: 12px; border-bottom: 4px solid #E10600;"><span style="font-family: Impact; font-size: 3rem; color: #E10600; font-style: italic;">F1 SasianGP</span></div>""", unsafe_allow_html=True)
 
     if menu == "📝 Hacer Apuesta":
         st.subheader("Tu Pronóstico Oficial")
@@ -148,126 +114,78 @@ else:
         gp_sel = st.selectbox("🌎 Selecciona Gran Premio:", carreras, index=None, placeholder="Elige un Gran Premio...")
         
         if not gp_sel:
-            st.info("👆 Selecciona un Gran Premio en el menú de arriba para abrir los pits y comenzar tu captura.")
+            st.info("👆 Selecciona un Gran Premio para abrir los pits.")
         else:
             bq, bc = True, True 
-            f_qualy_str, f_carrera_str = "Error de Fecha", "Error de Fecha"
-            
             f = df_cal[df_cal['Carrera'] == gp_sel]
             if not f.empty:
-                f_q = str(f.iloc[0]['Fecha_Qualy']).strip()
-                f_c = str(f.iloc[0]['Fecha_Carrera']).strip()
-                
-                dt_q = pd.to_datetime(f_q, format="%H:%M %d-%m-%Y", errors='coerce')
-                dt_c = pd.to_datetime(f_c, format="%H:%M %d-%m-%Y", errors='coerce')
                 ahora = datetime.utcnow() - timedelta(hours=6)
-                
-                if pd.notna(dt_q): 
-                    f_qualy_str = dt_q.strftime("%H:%M  %d-%m-%Y")
-                    if ahora < (dt_q + timedelta(hours=1)): bq = False
-                if pd.notna(dt_c): 
-                    f_carrera_str = dt_c.strftime("%H:%M  %d-%m-%Y")
-                    if ahora < (dt_c + timedelta(hours=1)): bc = False
+                dt_q = pd.to_datetime(f.iloc[0]['Fecha_Qualy'], format="%H:%M %d-%m-%Y", errors='coerce')
+                dt_c = pd.to_datetime(f.iloc[0]['Fecha_Carrera'], format="%H:%M %d-%m-%Y", errors='coerce')
+                # Margen de 2 horas por hoy (+1h en lugar de -1h)
+                if pd.notna(dt_q) and ahora < (dt_q + timedelta(hours=1)): bq = False
+                if pd.notna(dt_c) and ahora < (dt_c + timedelta(hours=1)): bc = False
 
-            # --- MAGIA: BUSCAR APUESTA PREVIA (PARQUE CERRADO) ---
-            datos_q = tabla_quinielas.get_all_records()
-            df_q = pd.DataFrame(datos_q) if datos_q else pd.DataFrame()
-            apuesta_previa = {}
-            ya_aposto = False
-            
-            if not df_q.empty and 'Jugador' in df_q.columns and 'Carrera' in df_q.columns:
+            df_q = pd.DataFrame(tabla_quinielas.get_all_records())
+            ya_aposto, ap_p = False, {}
+            if not df_q.empty:
                 filtro = df_q[(df_q['Jugador'] == st.session_state['usuario_activo']) & (df_q['Carrera'] == gp_sel)]
                 if not filtro.empty:
-                    apuesta_previa = filtro.iloc[-1].to_dict()
-                    ya_aposto = True
-                    st.info("💡 Ya tienes una quiniela registrada para esta carrera (Regla de Parque Cerrado). Aquí están tus pronósticos:")
+                    ya_aposto, ap_p = True, filtro.iloc[-1].to_dict()
+                    st.info("💡 Ya tienes una quiniela registrada (Regla de Parque Cerrado). Aquí están tus pronósticos:")
 
-            # Función para que las cajas recuerden a los pilotos
             def get_idx(campo):
-                if ya_aposto and campo in apuesta_previa and apuesta_previa[campo] in pilotos:
-                    return pilotos.index(apuesta_previa[campo])
-                return None
+                return pilotos.index(ap_p[campo]) if ya_aposto and ap_p.get(campo) in pilotos else None
 
             with st.form("apuesta_form"):
-                st.markdown(f"### ⏱️ Calificación (Cierre 1 hr antes de: {f_qualy_str})")
-                c1, c2, c3 = st.columns(3)
-                with c1: q1 = st.selectbox("PP1 (Pole):", pilotos, index=get_idx('Qualy_P1'), disabled=bq or ya_aposto, placeholder="Elige piloto...")
-                with c2: q2 = st.selectbox("PP2:", pilotos, index=get_idx('Qualy_P2'), disabled=bq or ya_aposto, placeholder="Elige piloto...")
-                with c3: q3 = st.selectbox("PP3:", pilotos, index=get_idx('Qualy_P3'), disabled=bq or ya_aposto, placeholder="Elige piloto...")
-                
+                st.markdown("### ⏱️ Calificación")
+                q1 = st.selectbox("PP1 (Pole):", pilotos, index=get_idx('Qualy_P1'), disabled=bq or ya_aposto)
                 st.write("---")
-                
-                st.markdown(f"### 🏁 Carrera (Cierre 1 hr antes de: {f_carrera_str})")
+                st.markdown("### 🏁 Carrera")
                 c4, c5, c6 = st.columns(3)
-                with c4: g1 = st.selectbox("Ganador (P1):", pilotos, index=get_idx('Carrera_P1'), disabled=bc or ya_aposto, placeholder="Elige piloto...")
-                with c5: g2 = st.selectbox("P2:", pilotos, index=get_idx('Carrera_P2'), disabled=bc or ya_aposto, placeholder="Elige piloto...")
-                with c6: g3 = st.selectbox("P3:", pilotos, index=get_idx('Carrera_P3'), disabled=bc or ya_aposto, placeholder="Elige piloto...")
-                
+                with c4: g1 = st.selectbox("Ganador (P1):", pilotos, index=get_idx('Carrera_P1'), disabled=bc or ya_aposto)
+                with c5: g2 = st.selectbox("P2:", pilotos, index=get_idx('Carrera_P2'), disabled=bc or ya_aposto)
+                with c6: g3 = st.selectbox("P3:", pilotos, index=get_idx('Carrera_P3'), disabled=bc or ya_aposto)
                 st.write("---")
-                
                 st.markdown("### 🎲 Bonos Especiales")
                 b1, b2 = st.columns(2)
-                with b1: vr = st.selectbox("🚀 Vuelta Rápida:", pilotos, index=get_idx('Vuelta_Rapida'), disabled=bc or ya_aposto, placeholder="Elige piloto...")
-                with b2: ab = st.selectbox("💥 Primer Abandono (Opcional):", pilotos, index=get_idx('Primer_Abandono'), disabled=bc or ya_aposto, placeholder="Elige piloto o deja en blanco...")
+                with b1: vr = st.selectbox("🚀 Vuelta Rápida:", pilotos, index=get_idx('Vuelta_Rapida'), disabled=bc or ya_aposto)
+                with b2: ab = st.selectbox("💥 Primer Abandono (Opcional):", pilotos, index=get_idx('Primer_Abandono'), disabled=bc or ya_aposto)
                 
-                if ya_aposto:
-                    st.form_submit_button("🔒 Apuesta en Parque Cerrado", disabled=True)
-                else:
+                if not ya_aposto:
                     if st.form_submit_button("🏎️ Sellar Apuesta"):
-                        if bq and bc:
-                            st.error("🔒 El candado de la FIA ya cayó. Los pits están cerrados para esta sesión.")
-                        else:
-                            v_ab = "🔒 CERRADO" if bc else (ab if ab else "")
-                            fila = [ahora.strftime("%Y-%m-%d %H:%M:%S"), st.session_state['usuario_activo'], gp_sel, q1, q2, q3, g1, g2, g3, vr, v_ab, 0]
-                            tabla_quinielas.append_row(fila)
-                            st.success("✅ ¡Apuesta sellada y registrada! Refresca la página para verla en Parque Cerrado.")
+                        v_ab = "🔒 CERRADO" if bc else (ab if ab else "")
+                        # Registro con las 12 columnas exactas: Fecha, Jugador, Carrera, Q1, Q2, Q3, G1, G2, G3, VR, Abandono, Puntos
+                        fila = [(datetime.utcnow()-timedelta(hours=6)).strftime("%Y-%m-%d %H:%M:%S"), st.session_state['usuario_activo'], gp_sel, q1, "", "", g1, g2, g3, vr, v_ab, 0]
+                        tabla_quinielas.append_row(fila)
+                        st.success("✅ ¡Apuesta sellada! Refresca la página para entrar en Parque Cerrado.")
+                        st.rerun()
+                else: st.form_submit_button("🔒 Apuesta en Parque Cerrado", disabled=True)
 
     elif menu == "🏆 El Paddock":
         st.subheader("Clasificación Mundial del Campeonato")
-        datos_q = tabla_quinielas.get_all_records()
+        dq = tabla_quinielas.get_all_records()
         df_j = pd.DataFrame(tabla_jugadores.get_all_records())
-        
-        if datos_q:
-            df_a = pd.DataFrame(datos_q)
-            df_a['Puntos_Totales'] = pd.to_numeric(df_a['Puntos_Totales'], errors='coerce').fillna(0)
-            df_a['Jugador'] = df_a['Jugador'].astype(str).str.strip()
+        if dq:
+            df = pd.DataFrame(dq)
+            df['Puntos_Totales'] = pd.to_numeric(df['Puntos_Totales'], errors='coerce').fillna(0)
+            res = df.groupby('Jugador')['Puntos_Totales'].sum().reset_index().sort_values('Puntos_Totales', ascending=False).reset_index(drop=True)
             if not df_j.empty:
-                df_j.columns = df_j.columns.str.strip() 
-                df_j['Nombre'] = df_j['Nombre'].astype(str).str.strip()
-                col_e = 'Escuderia_Favorita' if 'Escuderia_Favorita' in df_j.columns else 'Escudería'
-                if col_e in df_j.columns:
-                    df_j[col_e] = df_j[col_e].astype(str).str.strip()
-            
-            res = df_a.groupby('Jugador')['Puntos_Totales'].sum().reset_index()
-            res = res.sort_values(by='Puntos_Totales', ascending=False).reset_index(drop=True)
-            
-            if not df_j.empty and col_e in df_j.columns:
-                res = res.merge(df_j[['Nombre', col_e]], left_on='Jugador', right_on='Nombre', how='left')
-                res['🛡️'] = res[col_e].map(url_logos).fillna(url_logos["Cadillac"])
-            else:
-                res['🛡️'] = url_logos["Cadillac"]
-            
-            res.index = range(1, len(res) + 1)
-            st.dataframe(
-                res[['🛡️', 'Jugador', 'Puntos_Totales']],
-                use_container_width=True,
-                hide_index=True,
-                column_config={"🛡️": st.column_config.ImageColumn("", width="small"), "Jugador": st.column_config.TextColumn("PILOTO"), "Puntos_Totales": st.column_config.NumberColumn("PTS ⚡", format="%d")}
-            )
-        else:
-            st.info("🚦 El semáforo sigue en rojo. Aún no hay pronósticos registrados.")
+                res = res.merge(df_j[['Nombre', 'Escuderia_Favorita']], left_on='Jugador', right_on='Nombre', how='left')
+                res['🛡️'] = res['Escuderia_Favorita'].map(url_logos).fillna(url_logos["Cadillac"])
+            st.dataframe(res[['🛡️', 'Jugador', 'Puntos_Totales']], use_container_width=True, hide_index=True, column_config={"🛡️": st.column_config.ImageColumn("")})
 
     elif menu == "📖 Reglamento Oficial":
         st.header("📜 REGLAMENTO DEPORTIVO SASIANGP 2026")
         st.write("Bienvenidos a la máxima categoría. Aquí venimos a apostar el honor, no a hacer amigos. Lean las reglas a detalle para que luego no anden llorando por los rincones exigiendo puntos que no se ganaron.")
         st.markdown("---")
-        st.markdown("### ⏱️ ARTÍCULO 1: El Reloj No Perdona (Cierre de Pits)")
-        st.info("El sistema cuenta con un **Reloj Suizo** automático en formato de 24 hrs. \n* **Calificación (Qualy):** Se bloquea **EXACTAMENTE 1 HORA ANTES** de que los autos salgan a la pista.\n* **Carrera:** Se bloquea **EXACTAMENTE 1 HORA ANTES** del semáforo en verde.\n* **Excepciones:** NINGUNA. Si entras a la app 59 minutos antes, las cajitas estarán en gris y te vas con 0 puntos. Ni mandándole WhatsApp a Sasian se abre.")
-        st.markdown("### 🎯 ARTÍCULO 2: El Podio (Precisión Absoluta)")
-        st.success("Aquí no hay premios de consolación por 'casi' atinarle. O le das a la posición exacta o tienes cero.\n* 🥇 **Ganador (P1):** +3 Puntos.\n* 🥈 **Segundo (P2):** +3 Puntos.\n* 🥉 **Tercer (P3):** +3 Puntos.\n* ⏱️ **Pole Position (Qualy P1):** +3 Puntos.\n* 🚀 **Vuelta Rápida:** +2 Puntos si adivinas quién hace el giro más rápido el domingo.")
-        st.markdown("### ☠️ ARTÍCULO 3: El Bono 'Salado' (Riesgo Extremo)")
-        st.warning("Esta apuesta es **OPCIONAL**.\n* ✅ **Si Acertaste:** Si tu piloto es el primero en abandonar, eres un genio del mal y te llevas **+5 Puntos** directos.\n* ❌ **Si Fallaste:** Si sobrevive o alguien más abandona antes, te castigamos con **-2 Puntos**.\n* 🛡️ **Tip:** Dejar el espacio en blanco es totalmente válido y te salva de perder puntos.")
-        st.markdown("### ⚖️ ARTÍCULO 4: El Director de Carrera es Dios")
+        st.markdown("### ### ⏱️ ARTÍCULO 1: El Reloj No Perdona (Cierre de Pits)")
+        st.info("El sistema cuenta con un **Reloj Suizo** automático en formato de 24 hrs. \\n* **Calificación (Qualy):** Se bloquea **EXACTAMENTE 1 HORA ANTES** de que los autos salgan a la pista.\\n* **Carrera:** Se bloquea **EXACTAMENTE 1 HORA ANTES** del semáforo en verde.\\n* **Excepciones:** NINGUNA. Si entras a la app 59 minutos antes, las cajitas estarán en gris y te vas con 0 puntos. Ni mandándole WhatsApp a Sasian se abre.")
+        st.markdown("### ### 🎯 ARTÍCULO 2: El Podio (Precisión Absoluta)")
+        st.success("Aquí no hay premios de consolación por 'casi' atinarle. O le das a la posición exacta o tienes cero.\\n* 🥇 **Ganador (P1):** +3 Puntos.\\n* 🥈 **Segundo (P2):** +3 Puntos.\\n* 🥉 **Tercer (P3):** +3 Puntos.\\n* ⏱️ **Pole Position (Qualy P1):** +3 Puntos.\\n* 🚀 **Vuelta Rápida:** +2 Puntos si adivinas quién hace el giro más rápido el domingo.")
+        st.markdown("### ### ☠️ ARTÍCULO 3: El Bono 'Salado' (Riesgo Extremo)")
+        st.warning("Esta apuesta es **OPCIONAL**.\\n* ✅ **Si Acertaste:** Si tu piloto es el primero en abandonar, eres un genio del mal y te llevas **+5 Puntos** directos.\\n* ❌ **Si Fallaste:** Si sobrevive o alguien más abandona antes, te castigamos con **-2 Puntos**.\\n* 🛡️ **Tip:** Dejar el espacio en blanco es totalmente válido y te salva de perder puntos.")
+        st.markdown("### ### ⚖️ ARTÍCULO 4: El Director de Carrera es Dios")
         st.error("Los resultados son inyectados directamente por la telemetría oficial de la API y validados por el mismísimo **Sasian**. La decisión final es absoluta e inapelable.")
 
     elif menu == "👑 Admin FIA":
