@@ -61,9 +61,9 @@ if st.session_state['usuario_activo'] is None:
 
     with tab2:
         st.title("Firma con la Escudería")
-        nu = st.text_input("Crea tu Alias de Piloto:", key="r_u")
-        np = st.text_input("Crea tu Contraseña:", type="password", key="r_p")
-        esc = st.selectbox("Selecciona tu Escudería:", list(url_logos.keys()), key="r_e")
+        nu = st.text_input("Alias de Piloto:", key="r_u")
+        np = st.text_input("Contraseña:", type="password", key="r_p")
+        esc = st.selectbox("Escudería:", list(url_logos.keys()), key="r_e")
         if st.button("✍️ Firmar Contrato"):
             df_j = pd.DataFrame(tabla_jugadores.get_all_records())
             existentes = df_j['Nombre'].astype(str).str.strip().tolist() if not df_j.empty else []
@@ -73,12 +73,12 @@ if st.session_state['usuario_activo'] is None:
                 ahora_mx = datetime.utcnow() - timedelta(hours=6)
                 fila = [ahora_mx.strftime("%Y-%m-%d %H:%M"), nu.strip(), np.strip(), "", "", "", "", "", esc]
                 tabla_jugadores.append_row(fila)
-                st.success(f"✅ ¡Bienvenido {nu}! Ve a 'Acceso'.")
+                st.success(f"✅ Bienvenido {nu}. Ve a 'Acceso'.")
 
     with tab3:
         st.title("Recuperar Telemetría")
-        uo = st.text_input("Tu Alias de Piloto:", key="f_u")
-        if st.button("🔍 Buscar en el Paddock"):
+        uo = st.text_input("Tu Alias:", key="f_u")
+        if st.button("🔍 Buscar"):
             df_j = pd.DataFrame(tabla_jugadores.get_all_records())
             if not df_j.empty:
                 match = df_j[df_j['Nombre'].astype(str).str.strip() == uo.strip()]
