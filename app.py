@@ -117,7 +117,10 @@ else:
         gp_sel = st.selectbox("🌎 Selecciona GP:", lista_carreras_oficial, index=None, placeholder="Elige un Gran Premio...")
         if gp_sel:
             bq, bc = True, True
+            hora_q_txt = ""
+            hora_c_txt = ""
             f = df_cal_global[df_cal_global['Carrera'] == gp_sel]
+            
             if not f.empty:
                 fecha_q_str = f.iloc[0]['Fecha_Qualy']
                 fecha_c_str = f.iloc[0]['Fecha_Carrera']
@@ -126,8 +129,15 @@ else:
                 ahora = datetime.utcnow() - timedelta(hours=6)
                 dt_q = pd.to_datetime(fecha_q_str, format="%H:%M %d-%m-%Y", errors='coerce')
                 dt_c = pd.to_datetime(fecha_c_str, format="%H:%M %d-%m-%Y", errors='coerce')
-                if pd.notna(dt_q) and ahora < (dt_q - timedelta(hours=1)): bq = False
-                if pd.notna(dt_c) and ahora < (dt_c - timedelta(hours=1)): bc = False
+                
+                if pd.notna(dt_q):
+                    hora_q_txt = dt_q.strftime("%H:%M")
+                    if ahora < (dt_q - timedelta(hours=1)): bq = False
+                
+                if pd.notna(dt_c):
+                    hora_c_txt = dt_c.strftime("%H:%M")
+                    if ahora < (dt_c - timedelta(hours=1)): bc = False
+                    
             df_q = pd.DataFrame(tabla_quinielas.get_all_records())
             filtro = df_q[(df_q['Jugador'] == st.session_state['usuario_activo']) & (df_q['Carrera'] == gp_sel)]
             ya_aposto, ap_p = not filtro.empty, filtro.iloc[-1].to_dict() if not filtro.empty else {}
@@ -135,14 +145,17 @@ else:
 
             def get_idx(campo): return pilotos.index(ap_p.get(campo)) if ya_aposto and ap_p.get(campo) in pilotos else None
 
-            st.markdown("### ⏱️ Calificación")
+            # --- TITULOS CON LA HORA EXACTA ---
+            q_title = f" ({hora_q_txt} hrs CDMX)" if hora_q_txt else ""
+            st.markdown(f"### ⏱️ Calificación{q_title}")
             q1_col, q2_col, q3_col = st.columns(3)
             with q1_col: q1 = st.selectbox("Q1:", pilotos, index=get_idx('Qualy_P1'), key=f"q1_{gp_sel}", placeholder="Elige...", disabled=bq or ya_aposto)
             with q2_col: q2 = st.selectbox("Q2:", pilotos, index=get_idx('Qualy_P2'), key=f"q2_{gp_sel}", placeholder="Elige...", disabled=bq or ya_aposto)
             with q3_col: q3 = st.selectbox("Q3:", pilotos, index=get_idx('Qualy_P3'), key=f"q3_{gp_sel}", placeholder="Elige...", disabled=bq or ya_aposto)
             
             st.write("---")
-            st.markdown("### 🏁 Carrera")
+            c_title = f" ({hora_c_txt} hrs CDMX)" if hora_c_txt else ""
+            st.markdown(f"### 🏁 Carrera{c_title}")
             c1_col, c2_col, c3_col = st.columns(3)
             with c1_col: g1 = st.selectbox("P1:", pilotos, index=get_idx('Carrera_P1'), key=f"g1_{gp_sel}", placeholder="Elige...", disabled=bc or ya_aposto)
             with c2_col: g2 = st.selectbox("P2:", pilotos, index=get_idx('Carrera_P2'), key=f"g2_{gp_sel}", placeholder="Elige...", disabled=bc or ya_aposto)
@@ -179,7 +192,11 @@ else:
                 res = res.rename(columns={'Jugador': 'Piloto', 'Puntos_Totales': 'Puntos'})
                 
             res = res.sort_values('Puntos', ascending=False).reset_index(drop=True)
-            st.dataframe(res, use_container_width=True, hide_index=True, column_config={"🛡️": st.column_config.ImageColumn("")})
+            # PUNTOS CENTRADOS 
+            st.dataframe(res, use_container_width=True, hide_index=True, column_config={
+                "🛡️": st.column_config.ImageColumn(""),
+                "Puntos": st.column_config.NumberColumn("Puntos", alignment="center")
+            })
 
     elif menu == "📊 Paddock Detallado":
         st.subheader("🔍 Análisis de Telemetría (Paddock Detallado)")
@@ -199,9 +216,11 @@ else:
                     res = res.rename(columns={'Jugador': 'Piloto', 'Puntos_Totales': 'Puntos'})
                     
                 res = res.sort_values('Puntos', ascending=False).reset_index(drop=True)
-                st.dataframe(res, use_container_width=True, hide_index=True)
+                # PUNTOS CENTRADOS
+                st.dataframe(res, use_container_width=True, hide_index=True, column_config={
+                    "Puntos": st.column_config.NumberColumn("Puntos", alignment="center")
+                })
             else:
-                # --- NUEVA LEYENDA GRÁFICA DE PUNTOS ---
                 st.markdown("""
                 <div style="text-align: center; margin: 10px 0px 20px 0px; font-size: 1.1rem; background-color: #1e1e1e; padding: 12px; border-radius: 8px; border: 1px solid #333;">
                     <span style="color: #00e676; font-weight: bold;">Verde +3</span> <span style="color: #666; margin: 0 10px;">|</span> 
@@ -244,16 +263,10 @@ else:
                             if val in ["", "nan", "None", "🔒 CERRADO"]: continue
                             
                             base = col.split('\n')[0]
-                            
-                            # --- LÓGICA ESPECIAL PARA EL SALADO (DORADO / NEGRO) ---
                             if base == 'Salado':
                                 real = r_of.get('Salado', '')
-                                if val == real and real != "":
-                                    styles[i] = 'color: #FFD700; font-weight: bold; text-shadow: 1px 1px 2px #000;' # Dorado
-                                else:
-                                    styles[i] = 'color: #000000; font-weight: bold; background-color: #d3d3d3;' # Negro
-                            
-                            # --- LÓGICA NORMAL (VERDE / AMARILLO / ROJO) ---
+                                if val == real and real != "": styles[i] = 'color: #FFD700; font-weight: bold; text-shadow: 1px 1px 2px #000;'
+                                else: styles[i] = 'color: #000000; font-weight: bold; background-color: #d3d3d3;'
                             elif base in r_of:
                                 real = r_of[base]
                                 if val == real: styles[i] = 'color: #00e676; font-weight: bold;'
@@ -261,8 +274,12 @@ else:
                                 elif base in ['Q1','Q2','Q3'] and val in [r_of.get('Q1'), r_of.get('Q2'), r_of.get('Q3')]: styles[i] = 'color: #ffb300; font-weight: bold;'
                                 else: styles[i] = 'color: #ff5252; font-weight: bold;'
                         return styles
-                        
-                    st.dataframe(df_mostrar.style.apply(style_txt, axis=1).set_properties(**{'text-align': 'center'}, subset=df_mostrar.columns[1:]), use_container_width=True, hide_index=True)
+                    
+                    styled_df = df_mostrar.style.apply(style_txt, axis=1).set_properties(**{'text-align': 'center'}, subset=df_mostrar.columns[1:])
+                    # PUNTOS CENTRADOS
+                    st.dataframe(styled_df, use_container_width=True, hide_index=True, column_config={
+                        "Pts": st.column_config.NumberColumn("Pts", alignment="center")
+                    })
 
     elif menu == "📖 Reglamento Oficial":
         # --- REGLAMENTO ORIGINAL CONGELADO ---
@@ -285,7 +302,6 @@ else:
 
     elif menu == "👑 Admin FIA":
         sel_car = st.selectbox("Gran Premio a Dictaminar:", lista_carreras_oficial)
-        
         todos_resultados = tabla_resultados.get_all_values()
         res_previos = {}
         for fila in reversed(todos_resultados):
@@ -297,14 +313,11 @@ else:
                 }
                 break
 
-        if res_previos:
-            st.info("💡 Ya hay resultados oficiales guardados para esta carrera.")
+        if res_previos: st.info("💡 Ya hay resultados oficiales guardados para esta carrera.")
 
         def get_idx_res(llave, d_v=None):
-            if res_previos and llave in res_previos and res_previos[llave] in pilotos: 
-                return pilotos.index(res_previos[llave])
-            if d_v in pilotos: 
-                return pilotos.index(d_v)
+            if res_previos and llave in res_previos and res_previos[llave] in pilotos: return pilotos.index(res_previos[llave])
+            if d_v in pilotos: return pilotos.index(d_v)
             return None
 
         if st.button("⚡ Cargar API"):
@@ -333,21 +346,14 @@ else:
             with b3: abr = st.selectbox("Abandono:", pilotos, index=get_idx_res('rab'), placeholder="Ninguno")
             
             if st.form_submit_button("⚖️ Repartir Puntos"):
-                v_rq1 = rq1 if rq1 else ""
-                v_rq2 = rq2 if rq2 else ""
-                v_rq3 = rq3 if rq3 else ""
-                v_rg1 = rg1 if rg1 else ""
-                v_rg2 = rg2 if rg2 else ""
-                v_rg3 = rg3 if rg3 else ""
-                v_rvr = rvr if rvr else ""
-                v_rpd = rpd if rpd else ""
-                v_abr = abr if abr else ""
+                v_rq1 = rq1 if rq1 else ""; v_rq2 = rq2 if rq2 else ""; v_rq3 = rq3 if rq3 else ""
+                v_rg1 = rg1 if rg1 else ""; v_rg2 = rg2 if rg2 else ""; v_rg3 = rg3 if rg3 else ""
+                v_rvr = rvr if rvr else ""; v_rpd = rpd if rpd else ""; v_abr = abr if abr else ""
 
                 tabla_resultados.append_row([sel_car, v_rq1, v_rq2, v_rq3, v_rg1, v_rg2, v_rg3, v_rvr, v_rpd, v_abr])
                 celdas = []; t_q = tabla_quinielas.get_all_values()
                 
-                podio_c = [v_rg1, v_rg2, v_rg3]
-                podio_q = [v_rq1, v_rq2, v_rq3]
+                podio_c = [v_rg1, v_rg2, v_rg3]; podio_q = [v_rq1, v_rq2, v_rq3]
                 
                 for idx, fila in enumerate(t_q[1:], start=2):
                     fila += [""] * (13 - len(fila))
