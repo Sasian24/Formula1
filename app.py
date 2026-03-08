@@ -114,7 +114,7 @@ else:
     """, unsafe_allow_html=True)
 
     if menu == "📝 Hacer Apuesta":
-        gp_sel = st.selectbox("🌎 Selecciona GP:", lista_carreras_oficial, index=None)
+        gp_sel = st.selectbox("🌎 Selecciona GP:", lista_carreras_oficial, index=None, placeholder="Elige un Gran Premio...")
         if gp_sel:
             bq, bc = True, True
             f = df_cal_global[df_cal_global['Carrera'] == gp_sel]
@@ -132,15 +132,15 @@ else:
             def get_idx(campo): return pilotos.index(ap_p.get(campo)) if ya_aposto and ap_p.get(campo) in pilotos else None
 
             st.markdown("### ⏱️ Calificación")
-            q1 = st.selectbox("Q1:", pilotos, index=get_idx('Qualy_P1'), key=f"q1_{gp_sel}", disabled=bq or ya_aposto)
-            q2 = st.selectbox("Q2:", pilotos, index=get_idx('Qualy_P2'), key=f"q2_{gp_sel}", disabled=bq or ya_aposto)
-            q3 = st.selectbox("Q3:", pilotos, index=get_idx('Qualy_P3'), key=f"q3_{gp_sel}", disabled=bq or ya_aposto)
+            q1 = st.selectbox("Q1:", pilotos, index=get_idx('Qualy_P1'), key=f"q1_{gp_sel}", placeholder="Elige...", disabled=bq or ya_aposto)
+            q2 = st.selectbox("Q2:", pilotos, index=get_idx('Qualy_P2'), key=f"q2_{gp_sel}", placeholder="Elige...", disabled=bq or ya_aposto)
+            q3 = st.selectbox("Q3:", pilotos, index=get_idx('Qualy_P3'), key=f"q3_{gp_sel}", placeholder="Elige...", disabled=bq or ya_aposto)
             st.markdown("### 🏁 Carrera")
-            g1 = st.selectbox("P1:", pilotos, index=get_idx('Carrera_P1'), key=f"g1_{gp_sel}", disabled=bc or ya_aposto)
-            g2 = st.selectbox("P2:", pilotos, index=get_idx('Carrera_P2'), key=f"g2_{gp_sel}", disabled=bc or ya_aposto)
-            g3 = st.selectbox("P3:", pilotos, index=get_idx('Carrera_P3'), key=f"g3_{gp_sel}", disabled=bc or ya_aposto)
-            vr = st.selectbox("🚀 VR:", pilotos, index=get_idx('Vuelta_Rapida'), key=f"v_{gp_sel}", disabled=bc or ya_aposto)
-            pdia = st.selectbox("🌟 PD:", pilotos, index=get_idx('Piloto_Del_Dia'), key=f"p_{gp_sel}", disabled=bc or ya_aposto)
+            g1 = st.selectbox("P1:", pilotos, index=get_idx('Carrera_P1'), key=f"g1_{gp_sel}", placeholder="Elige...", disabled=bc or ya_aposto)
+            g2 = st.selectbox("P2:", pilotos, index=get_idx('Carrera_P2'), key=f"g2_{gp_sel}", placeholder="Elige...", disabled=bc or ya_aposto)
+            g3 = st.selectbox("P3:", pilotos, index=get_idx('Carrera_P3'), key=f"g3_{gp_sel}", placeholder="Elige...", disabled=bc or ya_aposto)
+            vr = st.selectbox("🚀 VR:", pilotos, index=get_idx('Vuelta_Rapida'), key=f"v_{gp_sel}", placeholder="Elige...", disabled=bc or ya_aposto)
+            pdia = st.selectbox("🌟 PD:", pilotos, index=get_idx('Piloto_Del_Dia'), key=f"p_{gp_sel}", placeholder="Elige...", disabled=bc or ya_aposto)
             ab = st.selectbox("💥 Abandono:", pilotos, index=get_idx('Primer_Abandono'), key=f"a_{gp_sel}", placeholder="Ninguno", disabled=bc or ya_aposto)
 
             if st.button("🏎️ Sellar Apuesta", disabled=ya_aposto):
@@ -224,46 +224,91 @@ else:
         st.warning("⚠️ **Opcional:** **+5 Puntos** si aciertas el primer abandono / **-2 Puntos** si fallas.")
 
     elif menu == "👑 Admin FIA":
-        sel_car = st.selectbox("Carrera:", lista_carreras_oficial)
-        if st.button("⚡ API"):
+        sel_car = st.selectbox("Gran Premio a Dictaminar:", lista_carreras_oficial)
+        
+        # MEMORIA DE ADMIN FIA RESTAURADA
+        todos_resultados = tabla_resultados.get_all_values()
+        res_previos = {}
+        for fila in reversed(todos_resultados):
+            if len(fila) >= 10 and fila[0] == sel_car:
+                res_previos = {
+                    'rq1': fila[1], 'rq2': fila[2], 'rq3': fila[3],
+                    'rg1': fila[4], 'rg2': fila[5], 'rg3': fila[6],
+                    'rvr': fila[7], 'rpd': fila[8], 'rab': fila[9]
+                }
+                break
+
+        if res_previos:
+            st.info("💡 Ya hay resultados oficiales guardados para esta carrera.")
+
+        def get_idx_res(llave, d_v=None):
+            if res_previos and llave in res_previos and res_previos[llave] in pilotos: 
+                return pilotos.index(res_previos[llave])
+            if d_v in pilotos: 
+                return pilotos.index(d_v)
+            return None
+
+        if st.button("⚡ Cargar API"):
             try:
                 r = requests.get("https://api.jolpi.ca/ergast/f1/current/last/results.json").json()
                 res_api = r['MRData']['RaceTable']['Races'][0]['Results']
                 st.session_state['auto_c1'] = traductor_api.get(res_api[0]['Driver']['familyName']); st.session_state['auto_c2'] = traductor_api.get(res_api[1]['Driver']['familyName']); st.session_state['auto_c3'] = traductor_api.get(res_api[2]['Driver']['familyName'])
                 st.success("API cargada.")
             except: st.error("Error API.")
+
         with st.form("fia"):
-            cq1, cq2, cq3 = st.columns(3); rq1 = cq1.selectbox("Q1:", pilotos); rq2 = cq2.selectbox("Q2:", pilotos); rq3 = cq3.selectbox("Q3:", pilotos)
-            cp1, cp2, cp3 = st.columns(3); rg1 = cp1.selectbox("P1:", pilotos, index=pilotos.index(st.session_state.get('auto_c1')) if st.session_state.get('auto_c1') in pilotos else None); rg2 = cp2.selectbox("P2:", pilotos, index=pilotos.index(st.session_state.get('auto_c2')) if st.session_state.get('auto_c2') in pilotos else None); rg3 = cp3.selectbox("P3:", pilotos, index=pilotos.index(st.session_state.get('auto_c3')) if st.session_state.get('auto_c3') in pilotos else None)
-            vrr = st.selectbox("VR:", pilotos); pdd = st.selectbox("PD:", pilotos); abr = st.selectbox("Abandono:", pilotos, index=None)
+            c1, c2, c3 = st.columns(3)
+            with c1: 
+                rq1 = st.selectbox("Q1:", pilotos, index=get_idx_res('rq1'), placeholder="Elige...")
+                rg1 = st.selectbox("P1:", pilotos, index=get_idx_res('rg1', st.session_state.get('auto_c1')), placeholder="Elige...")
+            with c2: 
+                rq2 = st.selectbox("Q2:", pilotos, index=get_idx_res('rq2'), placeholder="Elige...")
+                rg2 = st.selectbox("P2:", pilotos, index=get_idx_res('rg2', st.session_state.get('auto_c2')), placeholder="Elige...")
+            with c3: 
+                rq3 = st.selectbox("Q3:", pilotos, index=get_idx_res('rq3'), placeholder="Elige...")
+                rg3 = st.selectbox("P3:", pilotos, index=get_idx_res('rg3', st.session_state.get('auto_c3')), placeholder="Elige...")
+            
+            b1, b2, b3 = st.columns(3)
+            with b1: rvr = st.selectbox("VR:", pilotos, index=get_idx_res('rvr'), placeholder="Elige...")
+            with b2: rpd = st.selectbox("PD:", pilotos, index=get_idx_res('rpd'), placeholder="Elige...")
+            with b3: abr = st.selectbox("Abandono:", pilotos, index=get_idx_res('rab'), placeholder="Ninguno")
             
             if st.form_submit_button("⚖️ Repartir Puntos"):
-                tabla_resultados.append_row([sel_car, rq1, rq2, rq3, rg1, rg2, rg3, vrr, pdd, abr if abr else ""])
+                v_rq1 = rq1 if rq1 else ""
+                v_rq2 = rq2 if rq2 else ""
+                v_rq3 = rq3 if rq3 else ""
+                v_rg1 = rg1 if rg1 else ""
+                v_rg2 = rg2 if rg2 else ""
+                v_rg3 = rg3 if rg3 else ""
+                v_rvr = rvr if rvr else ""
+                v_rpd = rpd if rpd else ""
+                v_abr = abr if abr else ""
+
+                tabla_resultados.append_row([sel_car, v_rq1, v_rq2, v_rq3, v_rg1, v_rg2, v_rg3, v_rvr, v_rpd, v_abr])
                 celdas = []; t_q = tabla_quinielas.get_all_values()
                 
-                podio_c = [rg1.strip(), rg2.strip(), rg3.strip()]
-                podio_q = [rq1.strip(), rq2.strip(), rq3.strip()]
+                podio_c = [v_rg1, v_rg2, v_rg3]
+                podio_q = [v_rq1, v_rq2, v_rq3]
                 
                 for idx, fila in enumerate(t_q[1:], start=2):
                     fila += [""] * (13 - len(fila))
                     if fila[2].strip() == sel_car.strip():
                         p = 0
-                        # Matemáticas Carrera
                         ap_c = [fila[6].strip(), fila[7].strip(), fila[8].strip()]
                         for i, ap in enumerate(ap_c): 
                             if ap == podio_c[i] and ap != "": p += 3
                             elif ap in podio_c and ap != "": p += 1
-                        # Matemáticas Qualy
+                        
                         ap_q = [fila[3].strip(), fila[4].strip(), fila[5].strip()]
                         for i, ap in enumerate(ap_q):
                             if ap == podio_q[i] and ap != "": p += 3
                             elif ap in podio_q and ap != "": p += 1
-                        # Matemáticas Bonos
-                        if fila[9].strip() == vrr.strip() and vrr.strip() != "": p += 2
-                        if fila[10].strip() == pdd.strip() and pdd.strip() != "": p += 2
-                        # Matemática Salado
+                        
+                        if fila[9].strip() == v_rvr and v_rvr != "": p += 2
+                        if fila[10].strip() == v_rpd and v_rpd != "": p += 2
+                        
                         if fila[11].strip() != "" and fila[11].strip() != "🔒 CERRADO":
-                            if abr and fila[11].strip() == abr.strip() and abr.strip() != "": p += 5
+                            if v_abr and fila[11].strip() == v_abr and v_abr != "": p += 5
                             else: p -= 2
                             
                         celdas.append(gspread.Cell(row=idx, col=13, value=p))
