@@ -82,41 +82,38 @@ if st.session_state['usuario_activo'] is None:
                     st.error("❌ Acceso Denegado. Piloto no registrado o clave incorrecta.")
 
     with tab2:
-            st.title("Firma con la Escudería")
-            st.markdown("Llena tu perfil para unirte al campeonato.")
+        st.title("Firma con la Escudería")
+        st.markdown("Llena tu perfil para unirte al campeonato.")
+        
+        nu = st.text_input("Crea tu Alias de Piloto * (Obligatorio):", key="reg_u")
+        np = st.text_input("Crea tu Contraseña * (Obligatorio):", type="password", key="reg_p")
+        
+        c1, c2 = st.columns(2)
+        with c1:
+            wp = st.text_input("📱 WhatsApp (Opcional):", key="reg_wp")
+            cumple = st.date_input("🎂 Fecha de Nacimiento:", value=None, min_value=datetime(1940, 1, 1), max_value=datetime.today())
+        with c2:
+            mail = st.text_input("📧 Correo Electrónico (Opcional):", key="reg_m")
+            piloto_fav = st.selectbox("🏎️ Piloto Favorito:", pilotos, index=None, placeholder="Elige a tu ídolo...")
+
+        esc = st.selectbox("🛡️ Selecciona tu Escudería * (Obligatorio):", list(url_logos.keys()), key="reg_e")
+        
+        if st.button("✍️ Firmar Contrato"):
+            df_j = pd.DataFrame(tabla_jugadores.get_all_records())
+            existentes = df_j['Nombre'].astype(str).str.strip().tolist() if not df_j.empty else []
             
-            nu = st.text_input("Crea tu Alias de Piloto * (Obligatorio):", key="reg_u")
-            np = st.text_input("Crea tu Contraseña * (Obligatorio):", type="password", key="reg_p")
-            
-            c1, c2 = st.columns(2)
-            with c1:
-                wp = st.text_input("📱 WhatsApp (Opcional):", key="reg_wp")
-                cumple = st.date_input("🎂 Fecha de Nacimiento:", value=None, min_value=datetime(1940, 1, 1), max_value=datetime.today())
-            with c2:
-                mail = st.text_input("📧 Correo Electrónico (Opcional):", key="reg_m")
-                piloto_fav = st.selectbox("🏎️ Piloto Favorito:", pilotos, index=None, placeholder="Elige a tu ídolo...")
-    
-            esc = st.selectbox("🛡️ Selecciona tu Escudería * (Obligatorio):", list(url_logos.keys()), key="reg_e")
-            
-            if st.button("✍️ Firmar Contrato"):
-                df_j = pd.DataFrame(tabla_jugadores.get_all_records())
-                existentes = df_j['Nombre'].astype(str).str.strip().tolist() if not df_j.empty else []
+            if not nu or not np or not esc: 
+                st.warning("⚠️ Debes llenar al menos el Alias, Contraseña y Escudería.")
+            elif nu.strip() in existentes: 
+                st.error("❌ Ese Alias ya está ocupado en el Paddock.")
+            else:
+                ahora_mx = (datetime.utcnow() - timedelta(hours=6)).strftime("%Y-%m-%d %H:%M:%S")
+                fecha_cumple = cumple.strftime("%Y-%m-%d") if cumple else ""
+                piloto_final = piloto_fav if piloto_fav else ""
                 
-                # Validación: Solo Alias, Pass y Escudería son estrictamente obligatorios
-                if not nu or not np or not esc: 
-                    st.warning("⚠️ Debes llenar al menos el Alias, Contraseña y Escudería.")
-                elif nu.strip() in existentes: 
-                    st.error("❌ Ese Alias ya está ocupado en el Paddock.")
-                else:
-                    ahora_mx = (datetime.utcnow() - timedelta(hours=6)).strftime("%Y-%m-%d %H:%M:%S")
-                    # Formatear fecha y piloto por si los dejaron vacíos
-                    fecha_cumple = cumple.strftime("%Y-%m-%d") if cumple else ""
-                    piloto_final = piloto_fav if piloto_fav else ""
-                    
-                    # Orden exacto de tu DB: Fecha, Nombre, Pass, Whatsapp, Correo, Cumple, Piloto_Fav, Ruta_Foto, Escuderia
-                    fila = [ahora_mx, nu.strip(), np.strip(), wp.strip(), mail.strip(), fecha_cumple, piloto_final, "", esc]
-                    tabla_jugadores.append_row(fila)
-                    st.success(f"✅ ¡Bienvenido a la F1, {nu}! Ve a la pestaña de 'Acceso' para entrar a pits.")
+                fila = [ahora_mx, nu.strip(), np.strip(), wp.strip(), mail.strip(), fecha_cumple, piloto_final, "", esc]
+                tabla_jugadores.append_row(fila)
+                st.success(f"✅ ¡Bienvenido a la F1, {nu}! Ve a la pestaña de 'Acceso' para entrar a pits.")
 
     with tab3:
         st.title("Recuperar Telemetría")
@@ -164,7 +161,6 @@ else:
                     ya_aposto, ap_p = True, filtro.iloc[-1].to_dict()
                     st.info("💡 Detecté una prueba guardada, pero los candados están apagados por hoy. Puedes capturar libremente.")
 
-            # Esta función asegura que si es carrera nueva, regrese None (en blanco)
             def get_idx(campo):
                 if ya_aposto and ap_p.get(campo) in pilotos:
                     return pilotos.index(ap_p.get(campo))
@@ -172,7 +168,6 @@ else:
 
             st.markdown("### ⏱️ Calificación")
             q1_col, q2_col, q3_col = st.columns(3)
-            # Agregamos key dinámica basada en la carrera para que se limpien al cambiar de GP
             with q1_col: q1 = st.selectbox("PP1 (Pole):", pilotos, index=get_idx('Qualy_P1'), key=f"q1_{gp_sel}", placeholder="Elige...", disabled=bq)
             with q2_col: q2 = st.selectbox("Qualy P2:", pilotos, index=get_idx('Qualy_P2'), key=f"q2_{gp_sel}", placeholder="Elige...", disabled=bq)
             with q3_col: q3 = st.selectbox("Qualy P3:", pilotos, index=get_idx('Qualy_P3'), key=f"q3_{gp_sel}", placeholder="Elige...", disabled=bq)
@@ -186,24 +181,23 @@ else:
 
             st.write("---")
             st.markdown("### 🎲 Bonos Especiales")
-            b1, b2 = st.columns(2)
+            b1, b2, b3 = st.columns(3)
             with b1: vr = st.selectbox("🚀 Vuelta Rápida:", pilotos, index=get_idx('Vuelta_Rapida'), key=f"vr_{gp_sel}", placeholder="Elige...", disabled=bc)
+            with b2: pdia = st.selectbox("🌟 Piloto del Día:", pilotos, index=get_idx('Piloto_Del_Dia'), key=f"pd_{gp_sel}", placeholder="Elige...", disabled=bc)
             
             idx_ab = pilotos.index(ap_p.get('Primer_Abandono')) if ya_aposto and ap_p.get('Primer_Abandono') in pilotos else None
-            with b2: ab = st.selectbox("💥 Primer Abandono (Opcional):", pilotos, index=idx_ab, key=f"ab_{gp_sel}", placeholder="Ninguno", disabled=bc)
+            with b3: ab = st.selectbox("💥 Primer Abandono (Opcional):", pilotos, index=idx_ab, key=f"ab_{gp_sel}", placeholder="Ninguno", disabled=bc)
             
             if st.button("🏎️ Sellar Apuesta / Actualizar"):
-                # Validamos que no dejen espacios obligatorios en blanco
-                if None in [q1, q2, q3, g1, g2, g3, vr]:
+                if None in [q1, q2, q3, g1, g2, g3, vr, pdia]:
                     st.warning("⚠️ ¡Pits incompletos! Faltan pronósticos por llenar. El Bono Salado es el único opcional.")
-                # Validamos la Bandera Negra (repetidos)
                 elif len(set([q1, q2, q3])) < 3:
                     st.error("❌ ¡Bandera Negra! Tienes pilotos repetidos en la Calificación. Cámbialos.")
                 elif len(set([g1, g2, g3])) < 3:
                     st.error("❌ ¡Bandera Negra! Tienes pilotos repetidos en el podio de la Carrera. Cámbialos.")
                 else:
                     v_ab = "🔒 CERRADO" if bc else (ab if ab else "")
-                    fila = [(datetime.utcnow()-timedelta(hours=6)).strftime("%Y-%m-%d %H:%M:%S"), st.session_state['usuario_activo'], gp_sel, q1, q2, q3, g1, g2, g3, vr, v_ab, 0]
+                    fila = [(datetime.utcnow()-timedelta(hours=6)).strftime("%Y-%m-%d %H:%M:%S"), st.session_state['usuario_activo'], gp_sel, q1, q2, q3, g1, g2, g3, vr, pdia, v_ab, 0]
                     tabla_quinielas.append_row(fila)
                     st.success("✅ ¡Apuesta sellada con éxito!")
                     st.rerun()
@@ -227,8 +221,8 @@ else:
         st.markdown("---")
         st.markdown("### ⏱️ ARTÍCULO 1: El Reloj No Perdona (Cierre de Pits)")
         st.info("El sistema cuenta con un **Reloj Suizo** automático en formato de 24 hrs. \\n* **Calificación (Qualy):** Se bloquea **EXACTAMENTE 1 HORA ANTES** de que los autos salgan a la pista.\\n* **Carrera:** Se bloquea **EXACTAMENTE 1 HORA ANTES** del semáforo en verde.\\n* **Excepciones:** NINGUNA. Si entras a la app 59 minutos antes, las cajitas estarán en gris y te vas con 0 puntos.")
-        st.markdown("### 🎯 ARTÍCULO 2: El Podio (Precisión Absoluta)")
-        st.success("Aquí no hay premios de consolación por 'casi' atinarle. O le das a la posición exacta o tienes cero.\\n* 🥇 **Ganador (P1):** +3 Puntos.\\n* 🥈 **Segundo (P2):** +3 Puntos.\\n* 🥉 **Tercer (P3):** +3 Puntos.\\n* ⏱️ **Pole Position (Qualy P1):** +3 Puntos.\\n* 🚀 **Vuelta Rápida:** +2 Puntos si adivinas quién hace el giro más rápido el domingo.")
+        st.markdown("### 🎯 ARTÍCULO 2: El Podio (Precisión y Consuelo)")
+        st.success("🥇 **Posición Exacta:** +3 Puntos (Aplica para Carrera P1, P2, P3 y Qualy Q1, Q2, Q3).\\n🥈 **Acierto Desordenado:** +1 Punto si el piloto que elegiste queda en el Top 3, pero en una posición diferente a la que pronosticaste.\\n🚀 **Vuelta Rápida:** +2 Puntos.\\n🌟 **Piloto del Día:** +2 Puntos.")
         st.markdown("### ☠️ ARTÍCULO 3: El Bono 'Salado' (Riesgo Extremo)")
         st.warning("Esta apuesta es **OPCIONAL**.\\n* ✅ **Si Acertaste:** Si tu piloto es el primero en abandonar, eres un genio del mal y te llevas **+5 Puntos** directos.\\n* ❌ **Si Fallaste:** Si sobrevive o alguien más abandona antes, te castigamos con **-2 Puntos**.\\n* 🛡️ **Tip:** Dejar el espacio en blanco es totalmente válido y te salva de perder puntos.")
         st.markdown("### ⚖️ ARTÍCULO 4: El Director de Carrera es Dios")
@@ -266,24 +260,49 @@ else:
             with c3: rg3 = st.selectbox("P3 Real:", pilotos, index=idx3)
             
             st.markdown("### 🎲 Bonos")
-            b1, b2 = st.columns(2)
+            b1, b2, b3 = st.columns(3)
             with b1: rvr = st.selectbox("VR Real:", pilotos)
-            with b2: rab = st.selectbox("Salado Real:", pilotos)
+            with b2: rpd = st.selectbox("Piloto del Día Real:", pilotos)
+            with b3: rab = st.selectbox("Salado Real:", pilotos)
 
             if st.form_submit_button("⚖️ Repartir Puntos"):
-                tabla_resultados.append_row([sel_car, rq1, rq2, rq3, rg1, rg2, rg3, rvr, rab])
+                tabla_resultados.append_row([sel_car, rq1, rq2, rq3, rg1, rg2, rg3, rvr, rpd, rab])
                 aps = tabla_quinielas.get_all_records()
                 for i, ap in enumerate(aps, start=2):
                     if ap['Carrera'] == sel_car:
                         p = 0
+                        
+                        # --- CÁLCULO CARRERA (+3 exacto, +1 desorden) ---
+                        podio_carrera = [rg1, rg2, rg3]
                         if ap['Carrera_P1'] == rg1: p += 3
+                        elif ap['Carrera_P1'] in podio_carrera: p += 1
+                        
                         if ap['Carrera_P2'] == rg2: p += 3
+                        elif ap['Carrera_P2'] in podio_carrera: p += 1
+                        
                         if ap['Carrera_P3'] == rg3: p += 3
+                        elif ap['Carrera_P3'] in podio_carrera: p += 1
+
+                        # --- CÁLCULO QUALY (+3 exacto, +1 desorden) ---
+                        podio_qualy = [rq1, rq2, rq3]
                         if ap['Qualy_P1'] == rq1: p += 3
+                        elif ap['Qualy_P1'] in podio_qualy: p += 1
+                        
+                        if ap.get('Qualy_P2') == rq2: p += 3
+                        elif ap.get('Qualy_P2') in podio_qualy: p += 1
+                        
+                        if ap.get('Qualy_P3') == rq3: p += 3
+                        elif ap.get('Qualy_P3') in podio_qualy: p += 1
+
+                        # --- CÁLCULO BONOS ---
                         if ap['Vuelta_Rapida'] == rvr: p += 2
+                        if ap.get('Piloto_Del_Dia') == rpd: p += 2
+                        
                         s_ap = str(ap.get('Primer_Abandono', '')).strip()
                         if s_ap != "" and s_ap != "🔒 CERRADO":
                             if s_ap == rab: p += 5
                             else: p -= 2
-                        tabla_quinielas.update_cell(i, 12, p)
-                st.success("🏆 ¡Puntos actualizados en la base de datos!")
+                        
+                        # Guardar en la columna 13 (Puntos Totales)
+                        tabla_quinielas.update_cell(i, 13, p)
+                st.success("🏆 ¡Puntos calculados y actualizados en la base de datos!")
