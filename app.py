@@ -114,7 +114,7 @@ else:
                 
                 dt_q = pd.to_datetime(f_q, format="%H:%M %d-%m-%Y", errors='coerce')
                 dt_c = pd.to_datetime(f_c, format="%H:%M %d-%m-%Y", errors='coerce')
-                ahora = datetime.now()
+                ahora = datetime.utcnow() - timedelta(hours=6)
                 
                 if pd.notna(dt_q): 
                     f_qualy_str = dt_q.strftime("%H:%M  %d-%m-%Y")
