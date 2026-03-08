@@ -118,7 +118,7 @@ else:
         gp_sel = st.selectbox("🌎 Selecciona Gran Premio:", carreras, index=None, placeholder="Elige un Gran Premio...")
         
         if gp_sel:
-            # --- EXCEPCIÓN DEL DIRECTOR DE CARRERA: PITS ABIERTOS POR HOY ---
+            # --- EXCEPCIÓN DEL DIRECTOR DE CARRERA: PITS Y PARQUE CERRADO ABIERTOS POR HOY ---
             bq, bc = False, False 
             
             df_q = pd.DataFrame(tabla_quinielas.get_all_records())
@@ -127,35 +127,33 @@ else:
                 filtro = df_q[(df_q['Jugador'] == st.session_state['usuario_activo']) & (df_q['Carrera'] == gp_sel)]
                 if not filtro.empty:
                     ya_aposto, ap_p = True, filtro.iloc[-1].to_dict()
-                    st.info("💡 Ya tienes una quiniela registrada (Regla de Parque Cerrado). Aquí están tus pronósticos:")
+                    st.info("💡 Detecté una prueba guardada, pero los candados están apagados. Puedes capturar libremente.")
 
             def get_idx(campo):
                 return pilotos.index(ap_p[campo]) if ya_aposto and ap_p.get(campo) in pilotos else None
 
             with st.form("apuesta_form"):
                 st.markdown("### ⏱️ Calificación")
-                q1 = st.selectbox("PP1 (Pole):", pilotos, index=get_idx('Qualy_P1'), disabled=bq or ya_aposto)
+                # Quitamos por completo el "or ya_aposto" para que no bloquee las cajas
+                q1 = st.selectbox("PP1 (Pole):", pilotos, index=get_idx('Qualy_P1'), disabled=bq)
                 st.write("---")
                 st.markdown("### 🏁 Carrera")
                 c4, c5, c6 = st.columns(3)
-                with c4: g1 = st.selectbox("Ganador (P1):", pilotos, index=get_idx('Carrera_P1'), disabled=bc or ya_aposto)
-                with c5: g2 = st.selectbox("Segundo (P2):", pilotos, index=get_idx('Carrera_P2'), disabled=bc or ya_aposto)
-                with c6: g3 = st.selectbox("Tercer (P3):", pilotos, index=get_idx('Carrera_P3'), disabled=bc or ya_aposto)
+                with c4: g1 = st.selectbox("Ganador (P1):", pilotos, index=get_idx('Carrera_P1'), disabled=bc)
+                with c5: g2 = st.selectbox("Segundo (P2):", pilotos, index=get_idx('Carrera_P2'), disabled=bc)
+                with c6: g3 = st.selectbox("Tercer (P3):", pilotos, index=get_idx('Carrera_P3'), disabled=bc)
                 st.write("---")
                 st.markdown("### 🎲 Bonos Especiales")
                 b1, b2 = st.columns(2)
-                with b1: vr = st.selectbox("🚀 Vuelta Rápida:", pilotos, index=get_idx('Vuelta_Rapida'), disabled=bc or ya_aposto)
-                with b2: ab = st.selectbox("💥 Primer Abandono (Opcional):", pilotos, index=get_idx('Primer_Abandono'), disabled=bc or ya_aposto)
+                with b1: vr = st.selectbox("🚀 Vuelta Rápida:", pilotos, index=get_idx('Vuelta_Rapida'), disabled=bc)
+                with b2: ab = st.selectbox("💥 Primer Abandono (Opcional):", pilotos, index=get_idx('Primer_Abandono'), disabled=bc)
                 
-                if not ya_aposto:
-                    if st.form_submit_button("🏎️ Sellar Apuesta"):
-                        v_ab = "🔒 CERRADO" if bc else (ab if ab else "")
-                        fila = [(datetime.utcnow()-timedelta(hours=6)).strftime("%Y-%m-%d %H:%M:%S"), st.session_state['usuario_activo'], gp_sel, q1, "", "", g1, g2, g3, vr, v_ab, 0]
-                        tabla_quinielas.append_row(fila)
-                        st.success("✅ ¡Apuesta sellada con éxito!")
-                        st.rerun()
-                else: 
-                    st.form_submit_button("🔒 Apuesta en Parque Cerrado", disabled=True)
+                if st.form_submit_button("🏎️ Sellar Apuesta / Actualizar"):
+                    v_ab = "🔒 CERRADO" if bc else (ab if ab else "")
+                    fila = [(datetime.utcnow()-timedelta(hours=6)).strftime("%Y-%m-%d %H:%M:%S"), st.session_state['usuario_activo'], gp_sel, q1, "", "", g1, g2, g3, vr, v_ab, 0]
+                    tabla_quinielas.append_row(fila)
+                    st.success("✅ ¡Apuesta sellada con éxito!")
+                    st.rerun()
 
     elif menu == "🏆 El Paddock":
         st.subheader("Clasificación Mundial del Campeonato")
