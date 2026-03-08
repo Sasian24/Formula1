@@ -151,7 +151,15 @@ else:
         gp_sel = st.selectbox("🌎 Selecciona Gran Premio:", carreras, index=None, placeholder="Elige un Gran Premio...")
         
         if gp_sel:
-            bq, bc = False, False 
+            # 🚨 RELOJ SUIZO Y CANDADOS ACTIVOS 🚨
+            bq, bc = True, True 
+            f = df_cal[df_cal['Carrera'] == gp_sel]
+            if not f.empty:
+                ahora = datetime.utcnow() - timedelta(hours=6)
+                dt_q = pd.to_datetime(f.iloc[0]['Fecha_Qualy'], format="%H:%M %d-%m-%Y", errors='coerce')
+                dt_c = pd.to_datetime(f.iloc[0]['Fecha_Carrera'], format="%H:%M %d-%m-%Y", errors='coerce')
+                if pd.notna(dt_q) and ahora < (dt_q + timedelta(hours=1)): bq = False
+                if pd.notna(dt_c) and ahora < (dt_c + timedelta(hours=1)): bc = False
             
             df_q = pd.DataFrame(tabla_quinielas.get_all_records())
             ya_aposto, ap_p = False, {}
@@ -159,7 +167,7 @@ else:
                 filtro = df_q[(df_q['Jugador'] == st.session_state['usuario_activo']) & (df_q['Carrera'] == gp_sel)]
                 if not filtro.empty:
                     ya_aposto, ap_p = True, filtro.iloc[-1].to_dict()
-                    st.info("💡 Detecté una prueba guardada, pero los candados están apagados por hoy. Puedes capturar libremente.")
+                    st.info("💡 Parque Cerrado activo. Ya sellaste tu pronóstico para esta carrera.")
 
             def get_idx(campo):
                 if ya_aposto and ap_p.get(campo) in pilotos:
@@ -168,27 +176,27 @@ else:
 
             st.markdown("### ⏱️ Calificación")
             q1_col, q2_col, q3_col = st.columns(3)
-            with q1_col: q1 = st.selectbox("PP1 (Pole):", pilotos, index=get_idx('Qualy_P1'), key=f"q1_{gp_sel}", placeholder="Elige...", disabled=bq)
-            with q2_col: q2 = st.selectbox("Qualy P2:", pilotos, index=get_idx('Qualy_P2'), key=f"q2_{gp_sel}", placeholder="Elige...", disabled=bq)
-            with q3_col: q3 = st.selectbox("Qualy P3:", pilotos, index=get_idx('Qualy_P3'), key=f"q3_{gp_sel}", placeholder="Elige...", disabled=bq)
+            with q1_col: q1 = st.selectbox("PP1 (Pole):", pilotos, index=get_idx('Qualy_P1'), key=f"q1_{gp_sel}", placeholder="Elige...", disabled=bq or ya_aposto)
+            with q2_col: q2 = st.selectbox("Qualy P2:", pilotos, index=get_idx('Qualy_P2'), key=f"q2_{gp_sel}", placeholder="Elige...", disabled=bq or ya_aposto)
+            with q3_col: q3 = st.selectbox("Qualy P3:", pilotos, index=get_idx('Qualy_P3'), key=f"q3_{gp_sel}", placeholder="Elige...", disabled=bq or ya_aposto)
             
             st.write("---")
             st.markdown("### 🏁 Carrera")
             c4, c5, c6 = st.columns(3)
-            with c4: g1 = st.selectbox("Ganador (P1):", pilotos, index=get_idx('Carrera_P1'), key=f"g1_{gp_sel}", placeholder="Elige...", disabled=bc)
-            with c5: g2 = st.selectbox("Segundo (P2):", pilotos, index=get_idx('Carrera_P2'), key=f"g2_{gp_sel}", placeholder="Elige...", disabled=bc)
-            with c6: g3 = st.selectbox("Tercer (P3):", pilotos, index=get_idx('Carrera_P3'), key=f"g3_{gp_sel}", placeholder="Elige...", disabled=bc)
+            with c4: g1 = st.selectbox("Ganador (P1):", pilotos, index=get_idx('Carrera_P1'), key=f"g1_{gp_sel}", placeholder="Elige...", disabled=bc or ya_aposto)
+            with c5: g2 = st.selectbox("Segundo (P2):", pilotos, index=get_idx('Carrera_P2'), key=f"g2_{gp_sel}", placeholder="Elige...", disabled=bc or ya_aposto)
+            with c6: g3 = st.selectbox("Tercer (P3):", pilotos, index=get_idx('Carrera_P3'), key=f"g3_{gp_sel}", placeholder="Elige...", disabled=bc or ya_aposto)
 
             st.write("---")
             st.markdown("### 🎲 Bonos Especiales")
             b1, b2, b3 = st.columns(3)
-            with b1: vr = st.selectbox("🚀 Vuelta Rápida:", pilotos, index=get_idx('Vuelta_Rapida'), key=f"vr_{gp_sel}", placeholder="Elige...", disabled=bc)
-            with b2: pdia = st.selectbox("🌟 Piloto del Día:", pilotos, index=get_idx('Piloto_Del_Dia'), key=f"pd_{gp_sel}", placeholder="Elige...", disabled=bc)
+            with b1: vr = st.selectbox("🚀 Vuelta Rápida:", pilotos, index=get_idx('Vuelta_Rapida'), key=f"vr_{gp_sel}", placeholder="Elige...", disabled=bc or ya_aposto)
+            with b2: pdia = st.selectbox("🌟 Piloto del Día:", pilotos, index=get_idx('Piloto_Del_Dia'), key=f"pd_{gp_sel}", placeholder="Elige...", disabled=bc or ya_aposto)
             
             idx_ab = pilotos.index(ap_p.get('Primer_Abandono')) if ya_aposto and ap_p.get('Primer_Abandono') in pilotos else None
-            with b3: ab = st.selectbox("💥 Primer Abandono (Opcional):", pilotos, index=idx_ab, key=f"ab_{gp_sel}", placeholder="Ninguno", disabled=bc)
+            with b3: ab = st.selectbox("💥 Primer Abandono (Opcional):", pilotos, index=idx_ab, key=f"ab_{gp_sel}", placeholder="Ninguno", disabled=bc or ya_aposto)
             
-            if st.button("🏎️ Sellar Apuesta / Actualizar"):
+            if st.button("🏎️ Sellar Apuesta", disabled=ya_aposto):
                 if None in [q1, q2, q3, g1, g2, g3, vr, pdia]:
                     st.warning("⚠️ ¡Pits incompletos! Faltan pronósticos por llenar. El Bono Salado es el único opcional.")
                 elif len(set([q1, q2, q3])) < 3:
@@ -233,7 +241,6 @@ else:
                 if df_filtro.empty:
                     st.warning(f"Ningún piloto ha metido su monoplaza a pits para el {opcion_ver} todavía.")
                 else:
-                    # Acortamos los nombres de los pilotos para que la tabla no sea kilométrica
                     def acortar_nombre(nombre):
                         if pd.isna(nombre) or nombre == "" or nombre == "🔒 CERRADO": return nombre
                         partes = nombre.split()
@@ -244,7 +251,6 @@ else:
                         if col in df_filtro.columns:
                             df_filtro[col] = df_filtro[col].apply(acortar_nombre)
 
-                    # Renombrar columnas para que se vea como lo pediste
                     df_filtro = df_filtro.rename(columns={
                         "Qualy_P1": "Q1", "Qualy_P2": "Q2", "Qualy_P3": "Q3",
                         "Carrera_P1": "P1", "Carrera_P2": "P2", "Carrera_P3": "P3",
@@ -252,7 +258,6 @@ else:
                         "Primer_Abandono": "Salado", "Puntos_Totales": "Pts"
                     })
                     
-                    # Filtramos solo las columnas que importan para la vista detallada
                     cols_mostrar = ['Jugador']
                     cols_deseadas = ['Q1', 'Q2', 'Q3', 'P1', 'P2', 'P3', 'VR', 'PD', 'Salado', 'Pts']
                     for c in cols_deseadas:
@@ -287,29 +292,55 @@ else:
             except: 
                 st.error("❌ Error de comunicación.")
 
-        with st.form("fia_form"):
-            sel_car = st.selectbox("Gran Premio a Dictaminar:", carreras)
-            idx1 = pilotos.index(st.session_state['auto_c1']) if st.session_state['auto_c1'] in pilotos else None
-            idx2 = pilotos.index(st.session_state['auto_c2']) if st.session_state['auto_c2'] in pilotos else None
-            idx3 = pilotos.index(st.session_state['auto_c3']) if st.session_state['auto_c3'] in pilotos else None
+        # 🚨 EL SELECTOR DE CARRERA AHORA ESTÁ AFUERA DEL FORMULARIO 🚨
+        sel_car = st.selectbox("Gran Premio a Dictaminar:", carreras)
 
+        # Buscar en la DB si ya habías capturado resultados para esta carrera
+        todos_resultados = tabla_resultados.get_all_values()
+        res_previos = {}
+        for fila in reversed(todos_resultados):
+            # Leemos de atrás para adelante por si habías guardado varias veces
+            if len(fila) >= 10 and fila[0] == sel_car:
+                res_previos = {
+                    'rq1': fila[1], 'rq2': fila[2], 'rq3': fila[3],
+                    'rg1': fila[4], 'rg2': fila[5], 'rg3': fila[6],
+                    'rvr': fila[7], 'rpd': fila[8], 'rab': fila[9]
+                }
+                break
+
+        if res_previos:
+            st.info("💡 Ya hay resultados oficiales guardados para esta carrera. Aquí puedes editarlos si te equivocaste.")
+
+        # Función para jalar los datos de la DB si existen, o dejar los de la API/en blanco
+        def get_idx_res(llave, default_val=None):
+            if res_previos and res_previos.get(llave) in pilotos:
+                return pilotos.index(res_previos[llave])
+            if default_val in pilotos:
+                return pilotos.index(default_val)
+            return None
+
+        # 🚨 AHORA SÍ, EMPIEZA EL FORMULARIO 🚨
+        with st.form("fia_form"):
             st.markdown("### ⏱️ Resultados Calificación")
             cq1, cq2, cq3 = st.columns(3)
-            with cq1: rq1 = st.selectbox("Pole Real (Q1):", pilotos)
-            with cq2: rq2 = st.selectbox("Q2 Real:", pilotos)
-            with cq3: rq3 = st.selectbox("Q3 Real:", pilotos)
+            with cq1: rq1 = st.selectbox("Pole Real (Q1):", pilotos, index=get_idx_res('rq1'))
+            with cq2: rq2 = st.selectbox("Q2 Real:", pilotos, index=get_idx_res('rq2'))
+            with cq3: rq3 = st.selectbox("Q3 Real:", pilotos, index=get_idx_res('rq3'))
             
             st.markdown("### 🏁 Resultados Carrera")
             c1, c2, c3 = st.columns(3)
-            with c1: rg1 = st.selectbox("P1 Real:", pilotos, index=idx1)
-            with c2: rg2 = st.selectbox("P2 Real:", pilotos, index=idx2)
-            with c3: rg3 = st.selectbox("P3 Real:", pilotos, index=idx3)
+            with c1: rg1 = st.selectbox("P1 Real:", pilotos, index=get_idx_res('rg1', st.session_state.get('auto_c1')))
+            with c2: rg2 = st.selectbox("P2 Real:", pilotos, index=get_idx_res('rg2', st.session_state.get('auto_c2')))
+            with c3: rg3 = st.selectbox("P3 Real:", pilotos, index=get_idx_res('rg3', st.session_state.get('auto_c3')))
             
             st.markdown("### 🎲 Bonos")
             b1, b2, b3 = st.columns(3)
-            with b1: rvr = st.selectbox("VR Real:", pilotos)
-            with b2: rpd = st.selectbox("Piloto del Día Real:", pilotos)
-            with b3: rab = st.selectbox("Salado Real:", pilotos)
+            with b1: rvr = st.selectbox("VR Real:", pilotos, index=get_idx_res('rvr'))
+            with b2: rpd = st.selectbox("Piloto del Día Real:", pilotos, index=get_idx_res('rpd'))
+            
+            # El salado opcional
+            idx_rab = pilotos.index(res_previos['rab']) if res_previos and res_previos.get('rab') in pilotos else None
+            with b3: rab = st.selectbox("Salado Real:", pilotos, index=idx_rab, placeholder="Ninguno")
 
             if st.form_submit_button("⚖️ Repartir Puntos"):
                 tabla_resultados.append_row([sel_car, rq1, rq2, rq3, rg1, rg2, rg3, rvr, rpd, rab])
