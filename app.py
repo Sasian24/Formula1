@@ -118,18 +118,9 @@ else:
         gp_sel = st.selectbox("🌎 Selecciona Gran Premio:", carreras, index=None, placeholder="Elige un Gran Premio...")
         
         if gp_sel:
-            bq, bc = True, True 
-            f = df_cal[df_cal['Carrera'] == gp_sel]
-            if not f.empty:
-                ahora = datetime.utcnow() - timedelta(hours=6)
-                dt_q = pd.to_datetime(f.iloc[0]['Fecha_Qualy'], format="%H:%M %d-%m-%Y", errors='coerce')
-                dt_c = pd.to_datetime(f.iloc[0]['Fecha_Carrera'], format="%H:%M %d-%m-%Y", errors='coerce')
-                # Lógica del Reloj
-                if pd.notna(dt_q) and ahora < (dt_q + timedelta(hours=1)): 
-                    bq = False
-                if pd.notna(dt_c) and ahora < (dt_c + timedelta(hours=1)): 
-                    bc = False
-
+            # --- EXCEPCIÓN DEL DIRECTOR DE CARRERA: PITS ABIERTOS POR HOY ---
+            bq, bc = False, False 
+            
             df_q = pd.DataFrame(tabla_quinielas.get_all_records())
             ya_aposto, ap_p = False, {}
             if not df_q.empty:
