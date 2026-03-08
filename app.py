@@ -41,7 +41,7 @@ if 'auto_c1' not in st.session_state: st.session_state['auto_c1'] = None
 if 'auto_c2' not in st.session_state: st.session_state['auto_c2'] = None
 if 'auto_c3' not in st.session_state: st.session_state['auto_c3'] = None
 
-# --- 5. INTERFAZ DE ACCESO (LOGIN, REGISTRO Y RECUPERACIÓN) ---
+# --- 5. INTERFAZ DE ACCESO ---
 if st.session_state['usuario_activo'] is None:
     tab1, tab2, tab3 = st.tabs(["🔐 Acceso", "📝 Registrarse", "🆘 Olvidé mi Clave"])
     
@@ -57,28 +57,23 @@ if st.session_state['usuario_activo'] is None:
                 if not df_j[(df_j['Nombre'] == u.strip()) & (df_j['Password'] == p.strip())].empty:
                     st.session_state['usuario_activo'] = u.strip()
                     st.rerun()
-                else: st.error("❌ Acceso Denegado. Piloto no registrado o contraseña inválida.")
+                else: st.error("❌ Acceso Denegado.")
 
     with tab2:
         st.title("Firma con la Escudería")
         nu = st.text_input("Crea tu Alias de Piloto:", key="r_u")
         np = st.text_input("Crea tu Contraseña:", type="password", key="r_p")
         esc = st.selectbox("Selecciona tu Escudería:", list(url_logos.keys()), key="r_e")
-        
         if st.button("✍️ Firmar Contrato"):
             df_j = pd.DataFrame(tabla_jugadores.get_all_records())
             existentes = df_j['Nombre'].astype(str).str.strip().tolist() if not df_j.empty else []
-            if not nu or not np:
-                st.warning("⚠️ Debes llenar todos los campos.")
-            elif nu.strip() in existentes:
-                st.error("❌ Ese Alias ya está ocupado.")
+            if not nu or not np: st.warning("⚠️ Llena todos los campos.")
+            elif nu.strip() in existentes: st.error("❌ Alias ya ocupado.")
             else:
                 ahora_mx = datetime.utcnow() - timedelta(hours=6)
-                # Sincronizado con tus 9 columnas: Fecha, Nombre, Pass, WhatsApp, Correo, Cumple, Piloto, Foto, Escuderia
-                fila_j = [ahora_mx.strftime("%Y-%m-%d %H:%M"), nu.strip(), np.strip(), "", "", "", "", "", esc]
-                tabla_jugadores.append_row(fila_j)
-                st.success(f"✅ ¡Bienvenido, {nu}! Ahora ve a 'Acceso' para entrar.")
-                st.balloons()
+                fila = [ahora_mx.strftime("%Y-%m-%d %H:%M"), nu.strip(), np.strip(), "", "", "", "", "", esc]
+                tabla_jugadores.append_row(fila)
+                st.success(f"✅ ¡Bienvenido {nu}! Ve a 'Acceso'.")
 
     with tab3:
         st.title("Recuperar Telemetría")
@@ -87,9 +82,8 @@ if st.session_state['usuario_activo'] is None:
             df_j = pd.DataFrame(tabla_jugadores.get_all_records())
             if not df_j.empty:
                 match = df_j[df_j['Nombre'].astype(str).str.strip() == uo.strip()]
-                if not match.empty:
-                    st.success(f"🔑 Tu contraseña es: **{match.iloc[0]['Password']}**")
-                else: st.error("❓ Ese piloto no aparece en nuestros registros.")
+                if not match.empty: st.success(f"🔑 Tu clave es: **{match.iloc[0]['Password']}**")
+                else: st.error("❓ Piloto no encontrado.")
 
 # --- 6. APLICACIÓN PRINCIPAL ---
 else:
