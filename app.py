@@ -145,7 +145,6 @@ else:
 
             def get_idx(campo): return pilotos.index(ap_p.get(campo)) if ya_aposto and ap_p.get(campo) in pilotos else None
 
-            # --- TITULOS CON LA HORA EXACTA ---
             q_title = f" ({hora_q_txt} hrs CDMX)" if hora_q_txt else ""
             st.markdown(f"### ⏱️ Calificación{q_title}")
             q1_col, q2_col, q3_col = st.columns(3)
@@ -193,7 +192,8 @@ else:
                 
             res = res.sort_values('Puntos', ascending=False).reset_index(drop=True)
             
-            # --- PUNTOS Y ENCABEZADOS CENTRADOS DE FORMA SEGURA (SIN CRASHEOS) ---
+            # --- EL TRUCO PARA CENTRAR LOS PUNTOS ---
+            res['Puntos'] = res['Puntos'].astype(int).astype(str)
             estilos_tabla = [dict(selector="th", props=[("text-align", "center")])]
             res_estilizado = res.style.set_properties(**{'text-align': 'center'}, subset=['Puntos']).set_table_styles(estilos_tabla)
             st.dataframe(res_estilizado, use_container_width=True, hide_index=True, column_config={"🛡️": st.column_config.ImageColumn("")})
@@ -217,7 +217,8 @@ else:
                     
                 res = res.sort_values('Puntos', ascending=False).reset_index(drop=True)
                 
-                # --- PUNTOS Y ENCABEZADOS CENTRADOS DE FORMA SEGURA ---
+                # --- EL TRUCO PARA CENTRAR LOS PUNTOS ---
+                res['Puntos'] = res['Puntos'].astype(int).astype(str)
                 estilos_tabla = [dict(selector="th", props=[("text-align", "center")])]
                 res_estilizado = res.style.set_properties(**{'text-align': 'center'}, subset=['Puntos']).set_table_styles(estilos_tabla)
                 st.dataframe(res_estilizado, use_container_width=True, hide_index=True)
@@ -255,6 +256,8 @@ else:
                     if 'Pts' in df_mostrar.columns:
                         df_mostrar['Pts'] = pd.to_numeric(df_mostrar['Pts'], errors='coerce').fillna(0)
                         df_mostrar = df_mostrar.sort_values('Pts', ascending=False).reset_index(drop=True)
+                        # --- EL TRUCO PARA CENTRAR LOS PUNTOS ---
+                        df_mostrar['Pts'] = df_mostrar['Pts'].astype(int).astype(str)
                     
                     def style_txt(row):
                         styles = [''] * len(row)
@@ -276,7 +279,6 @@ else:
                                 else: styles[i] = 'color: #ff5252; font-weight: bold;'
                         return styles
                     
-                    # --- PUNTOS Y ENCABEZADOS CENTRADOS DE FORMA SEGURA ---
                     estilos_tabla = [dict(selector="th", props=[("text-align", "center")])]
                     styled_df = df_mostrar.style.apply(style_txt, axis=1).set_properties(**{'text-align': 'center'}, subset=df_mostrar.columns[1:]).set_table_styles(estilos_tabla)
                     
