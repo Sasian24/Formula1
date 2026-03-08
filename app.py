@@ -93,7 +93,7 @@ if st.session_state['usuario_activo'] is None:
 
 # --- 6. APLICACIÓN PRINCIPAL ---
 else:
-  es_admin = st.session_state['usuario_activo'] == "Sasian"
+ es_admin = st.session_state['usuario_activo'] == "Sasian"
 
     with st.sidebar:
         st.markdown(f"### 🏎️ Pits: {st.session_state['usuario_activo']}")
@@ -122,7 +122,7 @@ else:
                 ahora = datetime.utcnow() - timedelta(hours=6)
                 dt_q = pd.to_datetime(f.iloc[0]['Fecha_Qualy'], format="%H:%M %d-%m-%Y", errors='coerce')
                 dt_c = pd.to_datetime(f.iloc[0]['Fecha_Carrera'], format="%H:%M %d-%m-%Y", errors='coerce')
-                # Margen de 2 horas por hoy (+1h en lugar de -1h)
+                # Mantenemos el ajuste temporal de 2 horas (+1h en lugar de -1h)
                 if pd.notna(dt_q) and ahora < (dt_q + timedelta(hours=1)): bq = False
                 if pd.notna(dt_c) and ahora < (dt_c + timedelta(hours=1)): bc = False
 
@@ -155,10 +155,9 @@ else:
                 if not ya_aposto:
                     if st.form_submit_button("🏎️ Sellar Apuesta"):
                         v_ab = "🔒 CERRADO" if bc else (ab if ab else "")
-                        # Registro con las 12 columnas exactas: Fecha, Jugador, Carrera, Q1, Q2, Q3, G1, G2, G3, VR, Abandono, Puntos
                         fila = [(datetime.utcnow()-timedelta(hours=6)).strftime("%Y-%m-%d %H:%M:%S"), st.session_state['usuario_activo'], gp_sel, q1, "", "", g1, g2, g3, vr, v_ab, 0]
                         tabla_quinielas.append_row(fila)
-                        st.success("✅ ¡Apuesta sellada! Refresca la página para entrar en Parque Cerrado.")
+                        st.success("✅ ¡Apuesta sellada!")
                         st.rerun()
                 else: st.form_submit_button("🔒 Apuesta en Parque Cerrado", disabled=True)
 
