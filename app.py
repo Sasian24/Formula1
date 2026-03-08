@@ -81,23 +81,42 @@ if st.session_state['usuario_activo'] is None:
                 else: 
                     st.error("❌ Acceso Denegado. Piloto no registrado o clave incorrecta.")
 
-    with tab2:
+with tab2:
         st.title("Firma con la Escudería")
-        nu = st.text_input("Crea tu Alias de Piloto:", key="reg_u")
-        np = st.text_input("Crea tu Contraseña:", type="password", key="reg_p")
-        esc = st.selectbox("Selecciona tu Escudería:", list(url_logos.keys()), key="reg_e")
+        st.markdown("Llena tu perfil para unirte al campeonato.")
+        
+        nu = st.text_input("Crea tu Alias de Piloto * (Obligatorio):", key="reg_u")
+        np = st.text_input("Crea tu Contraseña * (Obligatorio):", type="password", key="reg_p")
+        
+        c1, c2 = st.columns(2)
+        with c1:
+            wp = st.text_input("📱 WhatsApp (Opcional):", key="reg_wp")
+            cumple = st.date_input("🎂 Fecha de Nacimiento:", value=None, min_value=datetime(1940, 1, 1), max_value=datetime.today())
+        with c2:
+            mail = st.text_input("📧 Correo Electrónico (Opcional):", key="reg_m")
+            piloto_fav = st.selectbox("🏎️ Piloto Favorito:", pilotos, index=None, placeholder="Elige a tu ídolo...")
+
+        esc = st.selectbox("🛡️ Selecciona tu Escudería * (Obligatorio):", list(url_logos.keys()), key="reg_e")
+        
         if st.button("✍️ Firmar Contrato"):
             df_j = pd.DataFrame(tabla_jugadores.get_all_records())
             existentes = df_j['Nombre'].astype(str).str.strip().tolist() if not df_j.empty else []
-            if not nu or not np: 
-                st.warning("⚠️ Debes llenar todos los campos.")
+            
+            # Validación: Solo Alias, Pass y Escudería son estrictamente obligatorios
+            if not nu or not np or not esc: 
+                st.warning("⚠️ Debes llenar al menos el Alias, Contraseña y Escudería.")
             elif nu.strip() in existentes: 
-                st.error("❌ Ese Alias ya está ocupado.")
+                st.error("❌ Ese Alias ya está ocupado en el Paddock.")
             else:
-                ahora_mx = (datetime.utcnow() - timedelta(hours=6)).strftime("%Y-%m-%d %H:%M")
-                fila = [ahora_mx, nu.strip(), np.strip(), "", "", "", "", "", esc]
+                ahora_mx = (datetime.utcnow() - timedelta(hours=6)).strftime("%Y-%m-%d %H:%M:%S")
+                # Formatear fecha y piloto por si los dejaron vacíos
+                fecha_cumple = cumple.strftime("%Y-%m-%d") if cumple else ""
+                piloto_final = piloto_fav if piloto_fav else ""
+                
+                # Orden exacto de tu DB: Fecha, Nombre, Pass, Whatsapp, Correo, Cumple, Piloto_Fav, Ruta_Foto, Escuderia
+                fila = [ahora_mx, nu.strip(), np.strip(), wp.strip(), mail.strip(), fecha_cumple, piloto_final, "", esc]
                 tabla_jugadores.append_row(fila)
-                st.success(f"✅ ¡Bienvenido a la F1, {nu}! Ve a la pestaña de 'Acceso'.")
+                st.success(f"✅ ¡Bienvenido a la F1, {nu}! Ve a la pestaña de 'Acceso' para entrar a pits.")
 
     with tab3:
         st.title("Recuperar Telemetría")
