@@ -96,7 +96,7 @@ else:
         </div>
     """, unsafe_allow_html=True)
 
-if menu == "📝 Hacer Apuesta":
+    if menu == "📝 Hacer Apuesta":
         st.subheader("Tu Pronóstico Oficial")
         df_cal = pd.DataFrame(tabla_calendario.get_all_records())
         gp_sel = st.selectbox("🌎 Selecciona Gran Premio:", carreras, index=None, placeholder="Elige un Gran Premio...")
@@ -136,7 +136,7 @@ if menu == "📝 Hacer Apuesta":
                     ya_aposto = True
                     st.info("💡 Ya tienes una quiniela registrada para esta carrera (Regla de Parque Cerrado). Aquí están tus pronósticos:")
 
-            # Función para que las cajas de selección recuerden a los pilotos
+            # Función para que las cajas recuerden a los pilotos
             def get_idx(campo):
                 if ya_aposto and campo in apuesta_previa and apuesta_previa[campo] in pilotos:
                     return pilotos.index(apuesta_previa[campo])
@@ -175,7 +175,6 @@ if menu == "📝 Hacer Apuesta":
                             fila = [ahora.strftime("%Y-%m-%d %H:%M:%S"), st.session_state['usuario_activo'], gp_sel, q1, q2, q3, g1, g2, g3, vr, v_ab, 0]
                             tabla_quinielas.append_row(fila)
                             st.success("✅ ¡Apuesta sellada y registrada! Refresca la página para verla en Parque Cerrado.")
-                        st.balloons()
 
     elif menu == "🏆 El Paddock":
         st.subheader("Clasificación Mundial del Campeonato")
