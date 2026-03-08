@@ -119,29 +119,41 @@ else:
             bq, bc = True, True
             f = df_cal_global[df_cal_global['Carrera'] == gp_sel]
             if not f.empty:
+                fecha_q_str = f.iloc[0]['Fecha_Qualy']
+                fecha_c_str = f.iloc[0]['Fecha_Carrera']
+                st.info(f"🕒 **Horarios Oficiales:** Qualy: {fecha_q_str} | Carrera: {fecha_c_str}")
+
                 ahora = datetime.utcnow() - timedelta(hours=6)
-                dt_q = pd.to_datetime(f.iloc[0]['Fecha_Qualy'], format="%H:%M %d-%m-%Y", errors='coerce')
-                dt_c = pd.to_datetime(f.iloc[0]['Fecha_Carrera'], format="%H:%M %d-%m-%Y", errors='coerce')
+                dt_q = pd.to_datetime(fecha_q_str, format="%H:%M %d-%m-%Y", errors='coerce')
+                dt_c = pd.to_datetime(fecha_c_str, format="%H:%M %d-%m-%Y", errors='coerce')
                 if pd.notna(dt_q) and ahora < (dt_q - timedelta(hours=1)): bq = False
                 if pd.notna(dt_c) and ahora < (dt_c - timedelta(hours=1)): bc = False
             df_q = pd.DataFrame(tabla_quinielas.get_all_records())
             filtro = df_q[(df_q['Jugador'] == st.session_state['usuario_activo']) & (df_q['Carrera'] == gp_sel)]
             ya_aposto, ap_p = not filtro.empty, filtro.iloc[-1].to_dict() if not filtro.empty else {}
-            if ya_aposto: st.info("💡 Parque Cerrado activo.")
+            if ya_aposto: st.warning("🔒 Parque Cerrado activo. Ya sellaste tu pronóstico para esta carrera.")
 
             def get_idx(campo): return pilotos.index(ap_p.get(campo)) if ya_aposto and ap_p.get(campo) in pilotos else None
 
             st.markdown("### ⏱️ Calificación")
-            q1 = st.selectbox("Q1:", pilotos, index=get_idx('Qualy_P1'), key=f"q1_{gp_sel}", placeholder="Elige...", disabled=bq or ya_aposto)
-            q2 = st.selectbox("Q2:", pilotos, index=get_idx('Qualy_P2'), key=f"q2_{gp_sel}", placeholder="Elige...", disabled=bq or ya_aposto)
-            q3 = st.selectbox("Q3:", pilotos, index=get_idx('Qualy_P3'), key=f"q3_{gp_sel}", placeholder="Elige...", disabled=bq or ya_aposto)
+            q1_col, q2_col, q3_col = st.columns(3)
+            with q1_col: q1 = st.selectbox("Q1:", pilotos, index=get_idx('Qualy_P1'), key=f"q1_{gp_sel}", placeholder="Elige...", disabled=bq or ya_aposto)
+            with q2_col: q2 = st.selectbox("Q2:", pilotos, index=get_idx('Qualy_P2'), key=f"q2_{gp_sel}", placeholder="Elige...", disabled=bq or ya_aposto)
+            with q3_col: q3 = st.selectbox("Q3:", pilotos, index=get_idx('Qualy_P3'), key=f"q3_{gp_sel}", placeholder="Elige...", disabled=bq or ya_aposto)
+            
+            st.write("---")
             st.markdown("### 🏁 Carrera")
-            g1 = st.selectbox("P1:", pilotos, index=get_idx('Carrera_P1'), key=f"g1_{gp_sel}", placeholder="Elige...", disabled=bc or ya_aposto)
-            g2 = st.selectbox("P2:", pilotos, index=get_idx('Carrera_P2'), key=f"g2_{gp_sel}", placeholder="Elige...", disabled=bc or ya_aposto)
-            g3 = st.selectbox("P3:", pilotos, index=get_idx('Carrera_P3'), key=f"g3_{gp_sel}", placeholder="Elige...", disabled=bc or ya_aposto)
-            vr = st.selectbox("🚀 VR:", pilotos, index=get_idx('Vuelta_Rapida'), key=f"v_{gp_sel}", placeholder="Elige...", disabled=bc or ya_aposto)
-            pdia = st.selectbox("🌟 PD:", pilotos, index=get_idx('Piloto_Del_Dia'), key=f"p_{gp_sel}", placeholder="Elige...", disabled=bc or ya_aposto)
-            ab = st.selectbox("💥 Abandono:", pilotos, index=get_idx('Primer_Abandono'), key=f"a_{gp_sel}", placeholder="Ninguno", disabled=bc or ya_aposto)
+            c1_col, c2_col, c3_col = st.columns(3)
+            with c1_col: g1 = st.selectbox("P1:", pilotos, index=get_idx('Carrera_P1'), key=f"g1_{gp_sel}", placeholder="Elige...", disabled=bc or ya_aposto)
+            with c2_col: g2 = st.selectbox("P2:", pilotos, index=get_idx('Carrera_P2'), key=f"g2_{gp_sel}", placeholder="Elige...", disabled=bc or ya_aposto)
+            with c3_col: g3 = st.selectbox("P3:", pilotos, index=get_idx('Carrera_P3'), key=f"g3_{gp_sel}", placeholder="Elige...", disabled=bc or ya_aposto)
+            
+            st.write("---")
+            st.markdown("### 🎲 Bonos Especiales")
+            b1_col, b2_col, b3_col = st.columns(3)
+            with b1_col: vr = st.selectbox("🚀 VR:", pilotos, index=get_idx('Vuelta_Rapida'), key=f"v_{gp_sel}", placeholder="Elige...", disabled=bc or ya_aposto)
+            with b2_col: pdia = st.selectbox("🌟 PD:", pilotos, index=get_idx('Piloto_Del_Dia'), key=f"p_{gp_sel}", placeholder="Elige...", disabled=bc or ya_aposto)
+            with b3_col: ab = st.selectbox("💥 Abandono (Opcional):", pilotos, index=get_idx('Primer_Abandono'), key=f"a_{gp_sel}", placeholder="Ninguno", disabled=bc or ya_aposto)
 
             if st.button("🏎️ Sellar Apuesta", disabled=ya_aposto):
                 if None in [q1, q2, q3, g1, g2, g3, vr, pdia]: st.warning("⚠️ Incompleto.")
@@ -170,6 +182,7 @@ else:
             st.dataframe(res, use_container_width=True, hide_index=True, column_config={"🛡️": st.column_config.ImageColumn("")})
 
     elif menu == "📊 Paddock Detallado":
+        st.subheader("🔍 Análisis de Telemetría (Paddock Detallado)")
         df_q = pd.DataFrame(tabla_quinielas.get_all_records())
         if not df_q.empty:
             op_v = st.selectbox("Ver:", ["🏆 Total"] + lista_carreras_oficial)
@@ -188,6 +201,17 @@ else:
                 res = res.sort_values('Puntos', ascending=False).reset_index(drop=True)
                 st.dataframe(res, use_container_width=True, hide_index=True)
             else:
+                # --- NUEVA LEYENDA GRÁFICA DE PUNTOS ---
+                st.markdown("""
+                <div style="text-align: center; margin: 10px 0px 20px 0px; font-size: 1.1rem; background-color: #1e1e1e; padding: 12px; border-radius: 8px; border: 1px solid #333;">
+                    <span style="color: #00e676; font-weight: bold;">Verde +3</span> <span style="color: #666; margin: 0 10px;">|</span> 
+                    <span style="color: #ffb300; font-weight: bold;">Amarillo +1</span> <span style="color: #666; margin: 0 10px;">|</span> 
+                    <span style="color: #ff5252; font-weight: bold;">Rojo = 0</span> <span style="color: #666; margin: 0 10px;">|</span> 
+                    <span style="color: black; font-weight: bold; background-color: #d3d3d3; padding: 2px 6px; border-radius: 4px;">Negro -2</span> <span style="color: #666; margin: 0 10px;">|</span> 
+                    <span style="color: #FFD700; font-weight: bold; text-shadow: 1px 1px 2px #000;">Dorado +5</span>
+                </div>
+                """, unsafe_allow_html=True)
+
                 df_f = df_q[df_q['Carrera'] == op_v].copy()
                 if not df_f.empty:
                     def ac_n(n): return str(n).split()[-1] if (pd.notna(n) and " " in str(n)) else str(n)
@@ -217,15 +241,27 @@ else:
                         for i, col in enumerate(row.index):
                             if col in ['Jugador', 'Pts'] or not r_of: continue
                             val = str(row[col]).strip()
-                            if val in ["", "nan", "None"]: continue
+                            if val in ["", "nan", "None", "🔒 CERRADO"]: continue
+                            
                             base = col.split('\n')[0]
-                            if base in r_of:
+                            
+                            # --- LÓGICA ESPECIAL PARA EL SALADO (DORADO / NEGRO) ---
+                            if base == 'Salado':
+                                real = r_of.get('Salado', '')
+                                if val == real and real != "":
+                                    styles[i] = 'color: #FFD700; font-weight: bold; text-shadow: 1px 1px 2px #000;' # Dorado
+                                else:
+                                    styles[i] = 'color: #000000; font-weight: bold; background-color: #d3d3d3;' # Negro
+                            
+                            # --- LÓGICA NORMAL (VERDE / AMARILLO / ROJO) ---
+                            elif base in r_of:
                                 real = r_of[base]
                                 if val == real: styles[i] = 'color: #00e676; font-weight: bold;'
                                 elif base in ['P1','P2','P3'] and val in [r_of.get('P1'), r_of.get('P2'), r_of.get('P3')]: styles[i] = 'color: #ffb300; font-weight: bold;'
                                 elif base in ['Q1','Q2','Q3'] and val in [r_of.get('Q1'), r_of.get('Q2'), r_of.get('Q3')]: styles[i] = 'color: #ffb300; font-weight: bold;'
                                 else: styles[i] = 'color: #ff5252; font-weight: bold;'
                         return styles
+                        
                     st.dataframe(df_mostrar.style.apply(style_txt, axis=1).set_properties(**{'text-align': 'center'}, subset=df_mostrar.columns[1:]), use_container_width=True, hide_index=True)
 
     elif menu == "📖 Reglamento Oficial":
