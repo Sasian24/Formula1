@@ -245,7 +245,6 @@ else:
                         partes = nombre.split()
                         return partes[-1] if len(partes) > 1 else nombre
 
-                    # 1. Traer los resultados oficiales para pintar de colores
                     todos_resultados = tabla_resultados.get_all_values()
                     res_oficiales = {}
                     for fila in reversed(todos_resultados):
@@ -262,7 +261,6 @@ else:
                         if col in df_filtro.columns:
                             df_filtro[col] = df_filtro[col].apply(acortar_nombre)
 
-                    # 2. Renombrar las columnas agregando el resultado correcto en el encabezado
                     nombres_base = {
                         "Qualy_P1": "Q1", "Qualy_P2": "Q2", "Qualy_P3": "Q3",
                         "Carrera_P1": "P1", "Carrera_P2": "P2", "Carrera_P3": "P3",
@@ -279,38 +277,31 @@ else:
                                 rename_dict[col_orig] = col_corta
                     
                     df_filtro = df_filtro.rename(columns=rename_dict)
-                    
                     cols_mostrar = ['Jugador'] + list(rename_dict.values())
                     df_mostrar = df_filtro[[c for c in cols_mostrar if c in df_filtro.columns]].copy()
 
-                    # 3. Función para pintar las celdas
                     def aplicar_colores(row):
                         styles = [''] * len(row)
                         for i, col_name in enumerate(row.index):
                             if col_name == 'Jugador' or col_name == 'Pts': continue
                             val = str(row[col_name]).strip()
                             if val == "" or val == "nan" or val == "🔒 CERRADO" or not res_oficiales: continue
-                                
                             base_col = col_name.split('\n')[0]
                             if base_col in res_oficiales:
                                 real_val = res_oficiales[base_col]
                                 if val == real_val:
-                                    styles[i] = 'background-color: #2e7d32; color: white;' # Verde (Exacto)
+                                    styles[i] = 'color: #00e676; font-weight: bold;'
                                 elif base_col in ['P1', 'P2', 'P3']:
                                     if val in [res_oficiales.get('P1'), res_oficiales.get('P2'), res_oficiales.get('P3')]:
-                                        styles[i] = 'background-color: #f57f17; color: white;' # Naranja (Desorden)
-                                    else:
-                                        styles[i] = 'background-color: #c62828; color: white;' # Rojo (Fallo)
+                                        styles[i] = 'color: #ffb300; font-weight: bold;'
+                                    else: styles[i] = 'color: #ff5252; font-weight: bold;'
                                 elif base_col in ['Q1', 'Q2', 'Q3']:
                                     if val in [res_oficiales.get('Q1'), res_oficiales.get('Q2'), res_oficiales.get('Q3')]:
-                                        styles[i] = 'background-color: #f57f17; color: white;' # Naranja (Desorden)
-                                    else:
-                                        styles[i] = 'background-color: #c62828; color: white;' # Rojo (Fallo)
-                                else:
-                                    styles[i] = 'background-color: #c62828; color: white;' # Rojo (Fallo)
+                                        styles[i] = 'color: #ffb300; font-weight: bold;'
+                                    else: styles[i] = 'color: #ff5252; font-weight: bold;'
+                                else: styles[i] = 'color: #ff5252; font-weight: bold;'
                         return styles
 
-                    # 4. Renderizar con el diseño Pro
                     styled_df = df_mostrar.style.apply(aplicar_colores, axis=1)
                     styled_df = styled_df.set_properties(**{'text-align': 'center'}, subset=df_mostrar.columns[1:])
                     st.dataframe(styled_df, use_container_width=True, hide_index=True)
@@ -321,10 +312,23 @@ else:
         st.markdown("---")
         st.markdown("### ⏱️ ARTÍCULO 1: El Reloj No Perdona (Cierre de Pits)")
         st.info("El sistema cuenta con un **Reloj Suizo** automático en formato de 24 hrs. \\n* **Calificación (Qualy):** Se bloquea **EXACTAMENTE 1 HORA ANTES** de que los autos salgan a la pista.\\n* **Carrera:** Se bloquea **EXACTAMENTE 1 HORA ANTES** del semáforo en verde.\\n* **Excepciones:** NINGUNA. Si entras a la app 59 minutos antes, las cajitas estarán en gris y te vas con 0 puntos.")
-        st.markdown("### 🎯 ARTÍCULO 2: El Podio (Precisión y Consuelo)")
-        st.success("🥇 **Posición Exacta:** +3 Puntos (Aplica para Carrera P1, P2, P3 y Qualy Q1, Q2, Q3).\\n🥈 **Acierto Desordenado:** +1 Punto si el piloto que elegiste queda en el Top 3, pero en una posición diferente a la que pronosticaste.\\n🚀 **Vuelta Rápida:** +2 Puntos.\\n🌟 **Piloto del Día:** +2 Puntos.")
+        
+        st.markdown("### 🎯 ARTÍCULO 2: Sistema de Puntuación Detallado")
+        st.success("""
+        Para las secciones de **Calificación (Q1, Q2, Q3)** y **Carrera (P1, P2, P3)**, el puntaje se calcula así:
+        * 🥇 **Posición Exacta:** **+3 Puntos** si aciertas al piloto en el lugar exacto que pronosticaste.
+        * 🥈 **Acierto Desordenado:** **+1 Punto** si tu piloto queda en el podio (Top 3) pero en una posición distinta a la que elegiste.
+        
+        **Ejemplo:** Si pones a Norris en P1 y queda en P2, obtienes **+1 punto**. Si queda en P1, obtienes **+3 puntos**.
+        
+        **Bonos Adicionales:**
+        * 🚀 **Vuelta Rápida:** **+2 Puntos** por acierto exacto.
+        * 🌟 **Piloto del Día:** **+2 Puntos** por acierto exacto.
+        """)
+        
         st.markdown("### ☠️ ARTÍCULO 3: El Bono 'Salado' (Riesgo Extremo)")
         st.warning("Esta apuesta es **OPCIONAL**.\\n* ✅ **Si Acertaste:** Si tu piloto es el primero en abandonar, eres un genio del mal y te llevas **+5 Puntos** directos.\\n* ❌ **Si Fallaste:** Si sobrevive o alguien más abandona antes, te castigamos con **-2 Puntos**.\\n* 🛡️ **Tip:** Dejar el espacio en blanco es totalmente válido y te salva de perder puntos.")
+        
         st.markdown("### ⚖️ ARTÍCULO 4: El Director de Carrera es Dios")
         st.error("Los resultados son inyectados directamente por la telemetría oficial de la API y validados por el mismísimo **Sasian**. La decisión final es absoluta e inapelable.")
 
@@ -338,30 +342,19 @@ else:
                 st.session_state['auto_c2'] = traductor_api.get(res_api[1]['Driver']['familyName'], None)
                 st.session_state['auto_c3'] = traductor_api.get(res_api[2]['Driver']['familyName'], None)
                 st.success("✅ Datos descargados con éxito.")
-            except: 
-                st.error("❌ Error de comunicación.")
+            except: st.error("❌ Error de comunicación.")
 
         sel_car = st.selectbox("Gran Premio a Dictaminar:", carreras)
-
         todos_resultados = tabla_resultados.get_all_values()
         res_previos = {}
         for fila in reversed(todos_resultados):
             if len(fila) >= 10 and fila[0] == sel_car:
-                res_previos = {
-                    'rq1': fila[1], 'rq2': fila[2], 'rq3': fila[3],
-                    'rg1': fila[4], 'rg2': fila[5], 'rg3': fila[6],
-                    'rvr': fila[7], 'rpd': fila[8], 'rab': fila[9]
-                }
+                res_previos = {'rq1': fila[1], 'rq2': fila[2], 'rq3': fila[3], 'rg1': fila[4], 'rg2': fila[5], 'rg3': fila[6], 'rvr': fila[7], 'rpd': fila[8], 'rab': fila[9]}
                 break
 
-        if res_previos:
-            st.info("💡 Ya hay resultados oficiales guardados para esta carrera. Puedes editar y re-calcular los puntos.")
-
-        def get_idx_res(llave, default_val=None):
-            if res_previos and res_previos.get(llave) in pilotos:
-                return pilotos.index(res_previos[llave])
-            if default_val in pilotos:
-                return pilotos.index(default_val)
+        def get_idx_res(llave, d_v=None):
+            if res_previos and res_previos.get(llave) in pilotos: return pilotos.index(res_previos[llave])
+            if d_v in pilotos: return pilotos.index(d_v)
             return None
 
         with st.form("fia_form"):
@@ -370,13 +363,11 @@ else:
             with cq1: rq1 = st.selectbox("Pole Real (Q1):", pilotos, index=get_idx_res('rq1'))
             with cq2: rq2 = st.selectbox("Q2 Real:", pilotos, index=get_idx_res('rq2'))
             with cq3: rq3 = st.selectbox("Q3 Real:", pilotos, index=get_idx_res('rq3'))
-            
             st.markdown("### 🏁 Resultados Carrera")
             c1, c2, c3 = st.columns(3)
             with c1: rg1 = st.selectbox("P1 Real:", pilotos, index=get_idx_res('rg1', st.session_state.get('auto_c1')))
             with c2: rg2 = st.selectbox("P2 Real:", pilotos, index=get_idx_res('rg2', st.session_state.get('auto_c2')))
             with c3: rg3 = st.selectbox("P3 Real:", pilotos, index=get_idx_res('rg3', st.session_state.get('auto_c3')))
-            
             st.markdown("### 🎲 Bonos")
             b1, b2, b3 = st.columns(3)
             with b1: rvr = st.selectbox("VR Real:", pilotos, index=get_idx_res('rvr'))
@@ -386,54 +377,25 @@ else:
 
             if st.form_submit_button("⚖️ Repartir Puntos"):
                 tabla_resultados.append_row([sel_car, rq1, rq2, rq3, rg1, rg2, rg3, rvr, rpd, rab])
-                
-                # 🚨 SISTEMA DE ESCRITURA BLINDADO POR COORDENADAS 🚨
-                celdas_actualizar = []
-                todas_filas_quiniela = tabla_quinielas.get_all_values()
-                
-                for idx, fila in enumerate(todas_filas_quiniela[1:], start=2):
-                    fila += [""] * (13 - len(fila)) # Emparejar columnas vacías por si acaso
-                    
-                    if fila[2] == sel_car: # Columna C es Carrera
-                        ap_q1, ap_q2, ap_q3 = fila[3].strip(), fila[4].strip(), fila[5].strip()
-                        ap_g1, ap_g2, ap_g3 = fila[6].strip(), fila[7].strip(), fila[8].strip()
-                        ap_vr, ap_pd = fila[9].strip(), fila[10].strip()
-                        ap_ab = fila[11].strip()
-                        
+                celdas_act = []
+                t_q = tabla_quinielas.get_all_values()
+                for idx, fila in enumerate(t_q[1:], start=2):
+                    fila += [""] * (13 - len(fila))
+                    if fila[2] == sel_car:
                         p = 0
-                        # --- CÁLCULO CARRERA ---
-                        podio_carrera = [rg1, rg2, rg3]
-                        if ap_g1 == rg1: p += 3
-                        elif ap_g1 in podio_carrera and ap_g1 != "": p += 1
-                        
-                        if ap_g2 == rg2: p += 3
-                        elif ap_g2 in podio_carrera and ap_g2 != "": p += 1
-                        
-                        if ap_g3 == rg3: p += 3
-                        elif ap_g3 in podio_carrera and ap_g3 != "": p += 1
-
-                        # --- CÁLCULO QUALY ---
-                        podio_qualy = [rq1, rq2, rq3]
-                        if ap_q1 == rq1: p += 3
-                        elif ap_q1 in podio_qualy and ap_q1 != "": p += 1
-                        
-                        if ap_q2 == rq2: p += 3
-                        elif ap_q2 in podio_qualy and ap_q2 != "": p += 1
-                        
-                        if ap_q3 == rq3: p += 3
-                        elif ap_q3 in podio_qualy and ap_q3 != "": p += 1
-
-                        # --- CÁLCULO BONOS ---
-                        if ap_vr == rvr and ap_vr != "": p += 2
-                        if ap_pd == rpd and ap_pd != "": p += 2
-                        
-                        if ap_ab != "" and ap_ab != "🔒 CERRADO":
-                            if ap_ab == rab: p += 5
+                        podio_c = [rg1, rg2, rg3]
+                        for i, ap_p in enumerate([fila[6], fila[7], fila[8]], 0):
+                            if ap_p == podio_c[i]: p += 3
+                            elif ap_p in podio_c and ap_p != "": p += 1
+                        podio_q = [rq1, rq2, rq3]
+                        for i, ap_q in enumerate([fila[3], fila[4], fila[5]], 0):
+                            if ap_q == podio_q[i]: p += 3
+                            elif ap_q in podio_q and ap_q != "": p += 1
+                        if fila[9] == rvr and fila[9] != "": p += 2
+                        if fila[10] == rpd and fila[10] != "": p += 2
+                        if fila[11] != "" and fila[11] != "🔒 CERRADO":
+                            if fila[11] == rab: p += 5
                             else: p -= 2
-                            
-                        # Anotamos el valor exacto para escribir en la celda M (columna 13)
-                        celdas_actualizar.append(gspread.Cell(row=idx, col=13, value=p))
-                
-                if celdas_actualizar:
-                    tabla_quinielas.update_cells(celdas_actualizar)
-                st.success("🏆 ¡Puntos calculados con precisión suiza y guardados en la base de datos!")
+                        celdas_act.append(gspread.Cell(row=idx, col=13, value=p))
+                if celdas_act: tabla_quinielas.update_cells(celdas_act)
+                st.success("🏆 ¡Puntos calculados con precisión suiza!")
