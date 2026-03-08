@@ -145,6 +145,7 @@ else:
 
             def get_idx(campo): return pilotos.index(ap_p.get(campo)) if ya_aposto and ap_p.get(campo) in pilotos else None
 
+            # --- QUALY ---
             q_title = f" ({hora_q_txt} hrs CDMX)" if hora_q_txt else ""
             st.markdown(f"### ⏱️ Calificación{q_title}")
             q1_col, q2_col, q3_col = st.columns(3)
@@ -152,7 +153,14 @@ else:
             with q2_col: q2 = st.selectbox("Q2:", pilotos, index=get_idx('Qualy_P2'), key=f"q2_{gp_sel}", placeholder="Elige...", disabled=bq or ya_aposto)
             with q3_col: q3 = st.selectbox("Q3:", pilotos, index=get_idx('Qualy_P3'), key=f"q3_{gp_sel}", placeholder="Elige...", disabled=bq or ya_aposto)
             
+            q_selections = [x for x in [q1, q2, q3] if x is not None]
+            hay_error_q = len(q_selections) != len(set(q_selections))
+            if hay_error_q:
+                st.error("❌ ¡Bandera Negra! Tienes pilotos repetidos en la Calificación. Cámbialos.")
+
             st.write("---")
+            
+            # --- CARRERA ---
             c_title = f" ({hora_c_txt} hrs CDMX)" if hora_c_txt else ""
             st.markdown(f"### 🏁 Carrera{c_title}")
             c1_col, c2_col, c3_col = st.columns(3)
@@ -160,24 +168,19 @@ else:
             with c2_col: g2 = st.selectbox("P2:", pilotos, index=get_idx('Carrera_P2'), key=f"g2_{gp_sel}", placeholder="Elige...", disabled=bc or ya_aposto)
             with c3_col: g3 = st.selectbox("P3:", pilotos, index=get_idx('Carrera_P3'), key=f"g3_{gp_sel}", placeholder="Elige...", disabled=bc or ya_aposto)
             
+            c_selections = [x for x in [g1, g2, g3] if x is not None]
+            hay_error_c = len(c_selections) != len(set(c_selections))
+            if hay_error_c:
+                st.error("❌ ¡Bandera Negra! Tienes pilotos repetidos en el podio de la Carrera. Cámbialos.")
+
             st.write("---")
+            
+            # --- BONOS ---
             st.markdown("### 🎲 Bonos Especiales")
             b1_col, b2_col, b3_col = st.columns(3)
             with b1_col: vr = st.selectbox("🚀 VR:", pilotos, index=get_idx('Vuelta_Rapida'), key=f"v_{gp_sel}", placeholder="Elige...", disabled=bc or ya_aposto)
             with b2_col: pdia = st.selectbox("🌟 PD:", pilotos, index=get_idx('Piloto_Del_Dia'), key=f"p_{gp_sel}", placeholder="Elige...", disabled=bc or ya_aposto)
             with b3_col: ab = st.selectbox("💥 Abandono (Opcional):", pilotos, index=get_idx('Primer_Abandono'), key=f"a_{gp_sel}", placeholder="Ninguno", disabled=bc or ya_aposto)
-
-            # --- SENSOR DE TELEMETRÍA EN VIVO (Banderas Negras) ---
-            q_selections = [x for x in [q1, q2, q3] if x is not None]
-            c_selections = [x for x in [g1, g2, g3] if x is not None]
-            
-            hay_error_q = len(q_selections) != len(set(q_selections))
-            hay_error_c = len(c_selections) != len(set(c_selections))
-            
-            if hay_error_q:
-                st.error("❌ ¡Bandera Negra! Tienes pilotos repetidos en la Calificación. Cámbialos.")
-            if hay_error_c:
-                st.error("❌ ¡Bandera Negra! Tienes pilotos repetidos en el podio de la Carrera. Cámbialos.")
 
             btn_disabled = ya_aposto or hay_error_q or hay_error_c
             
@@ -186,7 +189,7 @@ else:
                     st.warning("⚠️ ¡Pits incompletos! Faltan pronósticos por llenar. El Bono Salado es el único opcional.")
                 else:
                     tabla_quinielas.append_row([(datetime.utcnow()-timedelta(hours=6)).strftime("%Y-%m-%d %H:%M:%S"), st.session_state['usuario_activo'], gp_sel, q1, q2, q3, g1, g2, g3, vr, pdia, ab if ab else "", 0])
-                    st.success("✅ Sellado.")
+                    st.success("✅ ¡Apuesta sellada con éxito!")
                     st.rerun()
 
     elif menu == "🏆 El Paddock":
@@ -206,31 +209,24 @@ else:
                 
             res = res.sort_values('Puntos', ascending=False).reset_index(drop=True)
             
-            # --- TABLA HTML PURA: CENTRADO MATEMÁTICAMENTE PERFECTO ---
-            html_table = f"""
-            <table style="width:100%; border-collapse: collapse; font-family: sans-serif;">
-                <thead>
-                    <tr style="background-color: #2e2e3e; color: white;">
-                        <th style="text-align:center; padding: 12px; border-bottom: 2px solid #E10600;">🛡️</th>
-                        <th style="text-align:center; padding: 12px; border-bottom: 2px solid #E10600;">Piloto</th>
-                        <th style="text-align:center; padding: 12px; border-bottom: 2px solid #E10600;">Escudería</th>
-                        <th style="text-align:center; padding: 12px; border-bottom: 2px solid #E10600;">Puntos</th>
-                    </tr>
-                </thead>
-                <tbody>
-            """
+            # --- TABLA HTML BLINDADA CONTRA MARKDOWN ---
+            html_table = '<table style="width:100%; border-collapse: collapse; font-family: sans-serif;">'
+            html_table += '<thead><tr style="background-color: #2e2e3e; color: white;">'
+            html_table += '<th style="text-align:center; padding: 12px; border-bottom: 2px solid #E10600;">🛡️</th>'
+            html_table += '<th style="text-align:center; padding: 12px; border-bottom: 2px solid #E10600;">Piloto</th>'
+            html_table += '<th style="text-align:center; padding: 12px; border-bottom: 2px solid #E10600;">Escudería</th>'
+            html_table += '<th style="text-align:center; padding: 12px; border-bottom: 2px solid #E10600;">Puntos</th>'
+            html_table += '</tr></thead><tbody>'
             for _, row in res.iterrows():
                 logo_url = row.get('🛡️', '')
                 img_tag = f'<img src="{logo_url}" width="30">' if logo_url else ''
-                html_table += f"""
-                    <tr style="border-bottom: 1px solid #444; background-color: transparent;">
-                        <td style="text-align:center; padding: 10px; vertical-align: middle;">{img_tag}</td>
-                        <td style="text-align:center; padding: 10px; vertical-align: middle;">{row['Piloto']}</td>
-                        <td style="text-align:center; padding: 10px; vertical-align: middle;">{row.get('Escudería', '')}</td>
-                        <td style="text-align:center; padding: 10px; vertical-align: middle; font-weight: bold; font-size: 1.1rem;">{int(row['Puntos'])}</td>
-                    </tr>
-                """
-            html_table += "</tbody></table>"
+                html_table += '<tr style="border-bottom: 1px solid #444; background-color: transparent;">'
+                html_table += f'<td style="text-align:center; padding: 10px; vertical-align: middle;">{img_tag}</td>'
+                html_table += f'<td style="text-align:center; padding: 10px; vertical-align: middle;">{row["Piloto"]}</td>'
+                html_table += f'<td style="text-align:center; padding: 10px; vertical-align: middle;">{row.get("Escudería", "")}</td>'
+                html_table += f'<td style="text-align:center; padding: 10px; vertical-align: middle; font-weight: bold; font-size: 1.1rem;">{int(row["Puntos"])}</td>'
+                html_table += '</tr>'
+            html_table += '</tbody></table>'
             st.markdown(html_table, unsafe_allow_html=True)
 
     elif menu == "📊 Paddock Detallado":
@@ -252,27 +248,20 @@ else:
                     
                 res = res.sort_values('Puntos', ascending=False).reset_index(drop=True)
                 
-                # --- TABLA HTML PURA: CENTRADO PERFECTO ---
-                html_table = f"""
-                <table style="width:100%; border-collapse: collapse; font-family: sans-serif;">
-                    <thead>
-                        <tr style="background-color: #2e2e3e; color: white;">
-                            <th style="text-align:center; padding: 12px; border-bottom: 2px solid #E10600;">Piloto</th>
-                            <th style="text-align:center; padding: 12px; border-bottom: 2px solid #E10600;">Escudería</th>
-                            <th style="text-align:center; padding: 12px; border-bottom: 2px solid #E10600;">Puntos</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                """
+                # --- TABLA HTML BLINDADA CONTRA MARKDOWN ---
+                html_table = '<table style="width:100%; border-collapse: collapse; font-family: sans-serif;">'
+                html_table += '<thead><tr style="background-color: #2e2e3e; color: white;">'
+                html_table += '<th style="text-align:center; padding: 12px; border-bottom: 2px solid #E10600;">Piloto</th>'
+                html_table += '<th style="text-align:center; padding: 12px; border-bottom: 2px solid #E10600;">Escudería</th>'
+                html_table += '<th style="text-align:center; padding: 12px; border-bottom: 2px solid #E10600;">Puntos</th>'
+                html_table += '</tr></thead><tbody>'
                 for _, row in res.iterrows():
-                    html_table += f"""
-                        <tr style="border-bottom: 1px solid #444; background-color: transparent;">
-                            <td style="text-align:center; padding: 10px; vertical-align: middle;">{row['Piloto']}</td>
-                            <td style="text-align:center; padding: 10px; vertical-align: middle;">{row.get('Escudería', '')}</td>
-                            <td style="text-align:center; padding: 10px; vertical-align: middle; font-weight: bold; font-size: 1.1rem;">{int(row['Puntos'])}</td>
-                        </tr>
-                    """
-                html_table += "</tbody></table>"
+                    html_table += '<tr style="border-bottom: 1px solid #444; background-color: transparent;">'
+                    html_table += f'<td style="text-align:center; padding: 10px; vertical-align: middle;">{row["Piloto"]}</td>'
+                    html_table += f'<td style="text-align:center; padding: 10px; vertical-align: middle;">{row.get("Escudería", "")}</td>'
+                    html_table += f'<td style="text-align:center; padding: 10px; vertical-align: middle; font-weight: bold; font-size: 1.1rem;">{int(row["Puntos"])}</td>'
+                    html_table += '</tr>'
+                html_table += '</tbody></table>'
                 st.markdown(html_table, unsafe_allow_html=True)
             else:
                 st.markdown("""
@@ -310,15 +299,15 @@ else:
                         df_mostrar[col_pts] = pd.to_numeric(df_mostrar[col_pts], errors='coerce').fillna(0)
                         df_mostrar = df_mostrar.sort_values(col_pts, ascending=False).reset_index(drop=True)
                     
-                    # --- TABLA HTML PURA PARA DETALLADO (COLORES Y CENTRADO PERFECTO) ---
-                    html = '<table style="width:100%; text-align:center; border-collapse: collapse; font-family: sans-serif;">'
-                    html += '<tr style="background-color: #2e2e3e; color: white;">'
+                    # --- TABLA HTML BLINDADA CONTRA MARKDOWN ---
+                    html_det = '<table style="width:100%; text-align:center; border-collapse: collapse; font-family: sans-serif;">'
+                    html_det += '<tr style="background-color: #2e2e3e; color: white;">'
                     for col in df_mostrar.columns:
-                        html += f'<th style="text-align:center; padding: 10px; border-bottom: 2px solid #E10600; vertical-align: bottom;">{col}</th>'
-                    html += '</tr>'
+                        html_det += f'<th style="text-align:center; padding: 10px; border-bottom: 2px solid #E10600; vertical-align: bottom;">{col}</th>'
+                    html_det += '</tr>'
 
                     for _, row in df_mostrar.iterrows():
-                        html += '<tr style="border-bottom: 1px solid #444;">'
+                        html_det += '<tr style="border-bottom: 1px solid #444;">'
                         for col in df_mostrar.columns:
                             val = str(row[col]).strip() if pd.notna(row[col]) else ""
                             inner_html = val
@@ -339,10 +328,10 @@ else:
                             elif "Pts" in col:
                                 inner_html = f'<span style="font-weight: bold; font-size: 1.1rem;">{int(float(val)) if val != "" else 0}</span>'
                                 
-                            html += f'<td style="padding: 10px; vertical-align: middle; text-align:center;">{inner_html}</td>'
-                        html += '</tr>'
-                    html += '</table>'
-                    st.markdown(html, unsafe_allow_html=True)
+                            html_det += f'<td style="padding: 10px; vertical-align: middle; text-align:center;">{inner_html}</td>'
+                        html_det += '</tr>'
+                    html_det += '</table>'
+                    st.markdown(html_det, unsafe_allow_html=True)
 
     elif menu == "📖 Reglamento Oficial":
         # --- REGLAMENTO ORIGINAL COMPLETO Y CONGELADO ---
