@@ -145,46 +145,49 @@ else:
                     ya_aposto, ap_p = True, filtro.iloc[-1].to_dict()
                     st.info("💡 Detecté una prueba guardada, pero los candados están apagados por hoy. Puedes capturar libremente.")
 
-            def get_idx(campo, default_idx):
+            # Esta función asegura que si es carrera nueva, regrese None (en blanco)
+            def get_idx(campo):
                 if ya_aposto and ap_p.get(campo) in pilotos:
                     return pilotos.index(ap_p.get(campo))
-                return default_idx
+                return None
 
             st.markdown("### ⏱️ Calificación")
             q1_col, q2_col, q3_col = st.columns(3)
-            with q1_col: q1 = st.selectbox("PP1 (Pole):", pilotos, index=get_idx('Qualy_P1', 0), disabled=bq)
-            with q2_col: q2 = st.selectbox("Qualy P2:", pilotos, index=get_idx('Qualy_P2', 1), disabled=bq)
-            with q3_col: q3 = st.selectbox("Qualy P3:", pilotos, index=get_idx('Qualy_P3', 2), disabled=bq)
+            # Agregamos key dinámica basada en la carrera para que se limpien al cambiar de GP
+            with q1_col: q1 = st.selectbox("PP1 (Pole):", pilotos, index=get_idx('Qualy_P1'), key=f"q1_{gp_sel}", placeholder="Elige...", disabled=bq)
+            with q2_col: q2 = st.selectbox("Qualy P2:", pilotos, index=get_idx('Qualy_P2'), key=f"q2_{gp_sel}", placeholder="Elige...", disabled=bq)
+            with q3_col: q3 = st.selectbox("Qualy P3:", pilotos, index=get_idx('Qualy_P3'), key=f"q3_{gp_sel}", placeholder="Elige...", disabled=bq)
             
-            qualy_ok = len(set([q1, q2, q3])) == 3
-            if not qualy_ok:
-                st.error("❌ ¡Bandera Negra! Tienes pilotos repetidos en la Calificación. Cámbialos.")
-
             st.write("---")
             st.markdown("### 🏁 Carrera")
             c4, c5, c6 = st.columns(3)
-            with c4: g1 = st.selectbox("Ganador (P1):", pilotos, index=get_idx('Carrera_P1', 0), disabled=bc)
-            with c5: g2 = st.selectbox("Segundo (P2):", pilotos, index=get_idx('Carrera_P2', 1), disabled=bc)
-            with c6: g3 = st.selectbox("Tercer (P3):", pilotos, index=get_idx('Carrera_P3', 2), disabled=bc)
-            
-            carrera_ok = len(set([g1, g2, g3])) == 3
-            if not carrera_ok:
-                st.error("❌ ¡Bandera Negra! Tienes pilotos repetidos en la Carrera. Cámbialos.")
+            with c4: g1 = st.selectbox("Ganador (P1):", pilotos, index=get_idx('Carrera_P1'), key=f"g1_{gp_sel}", placeholder="Elige...", disabled=bc)
+            with c5: g2 = st.selectbox("Segundo (P2):", pilotos, index=get_idx('Carrera_P2'), key=f"g2_{gp_sel}", placeholder="Elige...", disabled=bc)
+            with c6: g3 = st.selectbox("Tercer (P3):", pilotos, index=get_idx('Carrera_P3'), key=f"g3_{gp_sel}", placeholder="Elige...", disabled=bc)
 
             st.write("---")
             st.markdown("### 🎲 Bonos Especiales")
             b1, b2 = st.columns(2)
-            with b1: vr = st.selectbox("🚀 Vuelta Rápida:", pilotos, index=get_idx('Vuelta_Rapida', 0), disabled=bc)
+            with b1: vr = st.selectbox("🚀 Vuelta Rápida:", pilotos, index=get_idx('Vuelta_Rapida'), key=f"vr_{gp_sel}", placeholder="Elige...", disabled=bc)
             
             idx_ab = pilotos.index(ap_p.get('Primer_Abandono')) if ya_aposto and ap_p.get('Primer_Abandono') in pilotos else None
-            with b2: ab = st.selectbox("💥 Primer Abandono (Opcional):", pilotos, index=idx_ab, placeholder="Ninguno", disabled=bc)
+            with b2: ab = st.selectbox("💥 Primer Abandono (Opcional):", pilotos, index=idx_ab, key=f"ab_{gp_sel}", placeholder="Ninguno", disabled=bc)
             
-            if st.button("🏎️ Sellar Apuesta / Actualizar", disabled=not (qualy_ok and carrera_ok)):
-                v_ab = "🔒 CERRADO" if bc else (ab if ab else "")
-                fila = [(datetime.utcnow()-timedelta(hours=6)).strftime("%Y-%m-%d %H:%M:%S"), st.session_state['usuario_activo'], gp_sel, q1, q2, q3, g1, g2, g3, vr, v_ab, 0]
-                tabla_quinielas.append_row(fila)
-                st.success("✅ ¡Apuesta sellada con éxito!")
-                st.rerun()
+            if st.button("🏎️ Sellar Apuesta / Actualizar"):
+                # Validamos que no dejen espacios obligatorios en blanco
+                if None in [q1, q2, q3, g1, g2, g3, vr]:
+                    st.warning("⚠️ ¡Pits incompletos! Faltan pronósticos por llenar. El Bono Salado es el único opcional.")
+                # Validamos la Bandera Negra (repetidos)
+                elif len(set([q1, q2, q3])) < 3:
+                    st.error("❌ ¡Bandera Negra! Tienes pilotos repetidos en la Calificación. Cámbialos.")
+                elif len(set([g1, g2, g3])) < 3:
+                    st.error("❌ ¡Bandera Negra! Tienes pilotos repetidos en el podio de la Carrera. Cámbialos.")
+                else:
+                    v_ab = "🔒 CERRADO" if bc else (ab if ab else "")
+                    fila = [(datetime.utcnow()-timedelta(hours=6)).strftime("%Y-%m-%d %H:%M:%S"), st.session_state['usuario_activo'], gp_sel, q1, q2, q3, g1, g2, g3, vr, v_ab, 0]
+                    tabla_quinielas.append_row(fila)
+                    st.success("✅ ¡Apuesta sellada con éxito!")
+                    st.rerun()
 
     elif menu == "🏆 El Paddock":
         st.subheader("Clasificación Mundial del Campeonato")
