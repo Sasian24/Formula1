@@ -167,9 +167,23 @@ else:
             with b2_col: pdia = st.selectbox("🌟 PD:", pilotos, index=get_idx('Piloto_Del_Dia'), key=f"p_{gp_sel}", placeholder="Elige...", disabled=bc or ya_aposto)
             with b3_col: ab = st.selectbox("💥 Abandono (Opcional):", pilotos, index=get_idx('Primer_Abandono'), key=f"a_{gp_sel}", placeholder="Ninguno", disabled=bc or ya_aposto)
 
-            if st.button("🏎️ Sellar Apuesta", disabled=ya_aposto):
-                if None in [q1, q2, q3, g1, g2, g3, vr, pdia]: st.warning("⚠️ Incompleto.")
-                elif len(set([q1, q2, q3])) < 3 or len(set([g1, g2, g3])) < 3: st.error("❌ Repetidos.")
+            # --- SENSOR DE TELEMETRÍA EN VIVO (Banderas Negras) ---
+            q_selections = [x for x in [q1, q2, q3] if x is not None]
+            c_selections = [x for x in [g1, g2, g3] if x is not None]
+            
+            hay_error_q = len(q_selections) != len(set(q_selections))
+            hay_error_c = len(c_selections) != len(set(c_selections))
+            
+            if hay_error_q:
+                st.error("❌ ¡Bandera Negra! Tienes pilotos repetidos en la Calificación. Cámbialos.")
+            if hay_error_c:
+                st.error("❌ ¡Bandera Negra! Tienes pilotos repetidos en el podio de la Carrera. Cámbialos.")
+
+            btn_disabled = ya_aposto or hay_error_q or hay_error_c
+            
+            if st.button("🏎️ Sellar Apuesta", disabled=btn_disabled):
+                if None in [q1, q2, q3, g1, g2, g3, vr, pdia]: 
+                    st.warning("⚠️ ¡Pits incompletos! Faltan pronósticos por llenar. El Bono Salado es el único opcional.")
                 else:
                     tabla_quinielas.append_row([(datetime.utcnow()-timedelta(hours=6)).strftime("%Y-%m-%d %H:%M:%S"), st.session_state['usuario_activo'], gp_sel, q1, q2, q3, g1, g2, g3, vr, pdia, ab if ab else "", 0])
                     st.success("✅ Sellado.")
@@ -192,11 +206,32 @@ else:
                 
             res = res.sort_values('Puntos', ascending=False).reset_index(drop=True)
             
-            # --- EL TRUCO PARA CENTRAR LOS PUNTOS ---
-            res['Puntos'] = res['Puntos'].astype(int).astype(str)
-            estilos_tabla = [dict(selector="th", props=[("text-align", "center")])]
-            res_estilizado = res.style.set_properties(**{'text-align': 'center'}, subset=['Puntos']).set_table_styles(estilos_tabla)
-            st.dataframe(res_estilizado, use_container_width=True, hide_index=True, column_config={"🛡️": st.column_config.ImageColumn("")})
+            # --- TABLA HTML PURA: CENTRADO MATEMÁTICAMENTE PERFECTO ---
+            html_table = f"""
+            <table style="width:100%; border-collapse: collapse; font-family: sans-serif;">
+                <thead>
+                    <tr style="background-color: #2e2e3e; color: white;">
+                        <th style="text-align:center; padding: 12px; border-bottom: 2px solid #E10600;">🛡️</th>
+                        <th style="text-align:center; padding: 12px; border-bottom: 2px solid #E10600;">Piloto</th>
+                        <th style="text-align:center; padding: 12px; border-bottom: 2px solid #E10600;">Escudería</th>
+                        <th style="text-align:center; padding: 12px; border-bottom: 2px solid #E10600;">Puntos</th>
+                    </tr>
+                </thead>
+                <tbody>
+            """
+            for _, row in res.iterrows():
+                logo_url = row.get('🛡️', '')
+                img_tag = f'<img src="{logo_url}" width="30">' if logo_url else ''
+                html_table += f"""
+                    <tr style="border-bottom: 1px solid #444; background-color: transparent;">
+                        <td style="text-align:center; padding: 10px; vertical-align: middle;">{img_tag}</td>
+                        <td style="text-align:center; padding: 10px; vertical-align: middle;">{row['Piloto']}</td>
+                        <td style="text-align:center; padding: 10px; vertical-align: middle;">{row.get('Escudería', '')}</td>
+                        <td style="text-align:center; padding: 10px; vertical-align: middle; font-weight: bold; font-size: 1.1rem;">{int(row['Puntos'])}</td>
+                    </tr>
+                """
+            html_table += "</tbody></table>"
+            st.markdown(html_table, unsafe_allow_html=True)
 
     elif menu == "📊 Paddock Detallado":
         st.subheader("🔍 Análisis de Telemetría (Paddock Detallado)")
@@ -217,11 +252,28 @@ else:
                     
                 res = res.sort_values('Puntos', ascending=False).reset_index(drop=True)
                 
-                # --- EL TRUCO PARA CENTRAR LOS PUNTOS ---
-                res['Puntos'] = res['Puntos'].astype(int).astype(str)
-                estilos_tabla = [dict(selector="th", props=[("text-align", "center")])]
-                res_estilizado = res.style.set_properties(**{'text-align': 'center'}, subset=['Puntos']).set_table_styles(estilos_tabla)
-                st.dataframe(res_estilizado, use_container_width=True, hide_index=True)
+                # --- TABLA HTML PURA: CENTRADO PERFECTO ---
+                html_table = f"""
+                <table style="width:100%; border-collapse: collapse; font-family: sans-serif;">
+                    <thead>
+                        <tr style="background-color: #2e2e3e; color: white;">
+                            <th style="text-align:center; padding: 12px; border-bottom: 2px solid #E10600;">Piloto</th>
+                            <th style="text-align:center; padding: 12px; border-bottom: 2px solid #E10600;">Escudería</th>
+                            <th style="text-align:center; padding: 12px; border-bottom: 2px solid #E10600;">Puntos</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                """
+                for _, row in res.iterrows():
+                    html_table += f"""
+                        <tr style="border-bottom: 1px solid #444; background-color: transparent;">
+                            <td style="text-align:center; padding: 10px; vertical-align: middle;">{row['Piloto']}</td>
+                            <td style="text-align:center; padding: 10px; vertical-align: middle;">{row.get('Escudería', '')}</td>
+                            <td style="text-align:center; padding: 10px; vertical-align: middle; font-weight: bold; font-size: 1.1rem;">{int(row['Puntos'])}</td>
+                        </tr>
+                    """
+                html_table += "</tbody></table>"
+                st.markdown(html_table, unsafe_allow_html=True)
             else:
                 st.markdown("""
                 <div style="text-align: center; margin: 10px 0px 20px 0px; font-size: 1.1rem; background-color: #1e1e1e; padding: 12px; border-radius: 8px; border: 1px solid #333;">
@@ -247,42 +299,50 @@ else:
                     
                     rename_dict = {}
                     for col in ["Q1","Q2","Q3","P1","P2","P3","VR","PD","Salado", "Pts"]:
-                        if col in r_of and r_of[col] != "": rename_dict[col] = f"{col}\n({r_of[col]})"
+                        if col in r_of and r_of[col] != "": rename_dict[col] = f"{col}<br><span style='font-size:0.8rem; color:#aaa;'>({r_of[col]})</span>"
                         else: rename_dict[col] = col
                     df_f = df_f.rename(columns=rename_dict)
                     cols_mostrar = ['Jugador'] + list(rename_dict.values())
                     df_mostrar = df_f[[c for c in cols_mostrar if c in df_f.columns]].copy()
                     
-                    if 'Pts' in df_mostrar.columns:
-                        df_mostrar['Pts'] = pd.to_numeric(df_mostrar['Pts'], errors='coerce').fillna(0)
-                        df_mostrar = df_mostrar.sort_values('Pts', ascending=False).reset_index(drop=True)
-                        # --- EL TRUCO PARA CENTRAR LOS PUNTOS ---
-                        df_mostrar['Pts'] = df_mostrar['Pts'].astype(int).astype(str)
+                    if list(rename_dict.values())[-1] in df_mostrar.columns:
+                        col_pts = list(rename_dict.values())[-1]
+                        df_mostrar[col_pts] = pd.to_numeric(df_mostrar[col_pts], errors='coerce').fillna(0)
+                        df_mostrar = df_mostrar.sort_values(col_pts, ascending=False).reset_index(drop=True)
                     
-                    def style_txt(row):
-                        styles = [''] * len(row)
-                        for i, col in enumerate(row.index):
-                            if col in ['Jugador', 'Pts'] or not r_of: continue
-                            val = str(row[col]).strip()
-                            if val in ["", "nan", "None", "🔒 CERRADO"]: continue
+                    # --- TABLA HTML PURA PARA DETALLADO (COLORES Y CENTRADO PERFECTO) ---
+                    html = '<table style="width:100%; text-align:center; border-collapse: collapse; font-family: sans-serif;">'
+                    html += '<tr style="background-color: #2e2e3e; color: white;">'
+                    for col in df_mostrar.columns:
+                        html += f'<th style="text-align:center; padding: 10px; border-bottom: 2px solid #E10600; vertical-align: bottom;">{col}</th>'
+                    html += '</tr>'
+
+                    for _, row in df_mostrar.iterrows():
+                        html += '<tr style="border-bottom: 1px solid #444;">'
+                        for col in df_mostrar.columns:
+                            val = str(row[col]).strip() if pd.notna(row[col]) else ""
+                            inner_html = val
                             
-                            base = col.split('\n')[0]
-                            if base == 'Salado':
-                                real = r_of.get('Salado', '')
-                                if val == real and real != "": styles[i] = 'color: #FFD700; font-weight: bold; text-shadow: 1px 1px 2px #000;'
-                                else: styles[i] = 'color: gray; font-weight: bold;'
-                            elif base in r_of:
-                                real = r_of[base]
-                                if val == real: styles[i] = 'color: #00e676; font-weight: bold;'
-                                elif base in ['P1','P2','P3'] and val in [r_of.get('P1'), r_of.get('P2'), r_of.get('P3')]: styles[i] = 'color: #ffb300; font-weight: bold;'
-                                elif base in ['Q1','Q2','Q3'] and val in [r_of.get('Q1'), r_of.get('Q2'), r_of.get('Q3')]: styles[i] = 'color: #ffb300; font-weight: bold;'
-                                else: styles[i] = 'color: #ff5252; font-weight: bold;'
-                        return styles
-                    
-                    estilos_tabla = [dict(selector="th", props=[("text-align", "center")])]
-                    styled_df = df_mostrar.style.apply(style_txt, axis=1).set_properties(**{'text-align': 'center'}, subset=df_mostrar.columns[1:]).set_table_styles(estilos_tabla)
-                    
-                    st.dataframe(styled_df, use_container_width=True, hide_index=True)
+                            if col != 'Jugador' and "Pts" not in col and r_of:
+                                base = col.split('<br>')[0]
+                                if val not in ["", "nan", "None", "🔒 CERRADO"]:
+                                    if base == 'Salado':
+                                        real = r_of.get('Salado', '')
+                                        if val == real and real != "": inner_html = f'<span style="color: #FFD700; font-weight: bold; text-shadow: 1px 1px 2px #000;">{val}</span>'
+                                        else: inner_html = f'<span style="color: gray; font-weight: bold;">{val}</span>'
+                                    elif base in r_of:
+                                        real = r_of[base]
+                                        if val == real: inner_html = f'<span style="color: #00e676; font-weight: bold;">{val}</span>'
+                                        elif base in ['P1','P2','P3'] and val in [r_of.get('P1'), r_of.get('P2'), r_of.get('P3')]: inner_html = f'<span style="color: #ffb300; font-weight: bold;">{val}</span>'
+                                        elif base in ['Q1','Q2','Q3'] and val in [r_of.get('Q1'), r_of.get('Q2'), r_of.get('Q3')]: inner_html = f'<span style="color: #ffb300; font-weight: bold;">{val}</span>'
+                                        else: inner_html = f'<span style="color: #ff5252; font-weight: bold;">{val}</span>'
+                            elif "Pts" in col:
+                                inner_html = f'<span style="font-weight: bold; font-size: 1.1rem;">{int(float(val)) if val != "" else 0}</span>'
+                                
+                            html += f'<td style="padding: 10px; vertical-align: middle; text-align:center;">{inner_html}</td>'
+                        html += '</tr>'
+                    html += '</table>'
+                    st.markdown(html, unsafe_allow_html=True)
 
     elif menu == "📖 Reglamento Oficial":
         # --- REGLAMENTO ORIGINAL COMPLETO Y CONGELADO ---
