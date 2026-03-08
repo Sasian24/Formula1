@@ -55,20 +55,58 @@ if 'auto_c1' not in st.session_state: st.session_state['auto_c1'] = None
 if 'auto_c2' not in st.session_state: st.session_state['auto_c2'] = None
 if 'auto_c3' not in st.session_state: st.session_state['auto_c3'] = None
 
-# --- 5. INTERFAZ DE ACCESO ---
+# --- 5. INTERFAZ DE ACCESO (LOGIN, REGISTRO Y RECUPERACIÓN) ---
 if st.session_state['usuario_activo'] is None:
-    st.title("🔐 Acceso - SasianGP")
-    u = st.text_input("Alias de Piloto:")
-    p = st.text_input("Contraseña de Telemetría:", type="password")
-    if st.button("🏁 Arrancar Motores"):
-        df_j = pd.DataFrame(tabla_jugadores.get_all_records())
-        if not df_j.empty:
-            df_j['Nombre'] = df_j['Nombre'].astype(str).str.strip()
-            df_j['Password'] = df_j['Password'].astype(str).str.strip()
-            if not df_j[(df_j['Nombre'] == u.strip()) & (df_j['Password'] == p.strip())].empty:
-                st.session_state['usuario_activo'] = u.strip()
-                st.rerun()
-            else: st.error("❌ Acceso Denegado. Piloto no registrado o contraseña inválida.")
+    tab1, tab2, tab3 = st.tabs(["🔐 Acceso", "📝 Registrarse", "🆘 Olvidé mi Clave"])
+    
+    with tab1:
+        st.title("Acceso - SasianGP")
+        u = st.text_input("Alias de Piloto:", key="login_user")
+        p = st.text_input("Contraseña de Telemetría:", type="password", key="login_pass")
+        if st.button("🏁 Arrancar Motores"):
+            df_j = pd.DataFrame(tabla_jugadores.get_all_records())
+            if not df_j.empty:
+                df_j['Nombre'] = df_j['Nombre'].astype(str).str.strip()
+                df_j['Password'] = df_j['Password'].astype(str).str.strip()
+                user_match = df_j[(df_j['Nombre'] == u.strip()) & (df_j['Password'] == p.strip())]
+                if not user_match.empty:
+                    st.session_state['usuario_activo'] = u.strip()
+                    st.rerun()
+                else: st.error("❌ Acceso Denegado. Piloto no registrado o contraseña inválida.")
+
+    with tab2:
+        st.title("Firma con la Escudería")
+        nuevo_u = st.text_input("Crea tu Alias de Piloto:", key="reg_user")
+        nuevo_p = st.text_input("Crea tu Contraseña:", type="password", key="reg_pass")
+        escuderia = st.selectbox("Selecciona tu Escudería:", list(url_logos.keys()), key="reg_team")
+        
+        if st.button("✍️ Firmar Contrato"):
+            df_j = pd.DataFrame(tabla_jugadores.get_all_records())
+            nombres_existentes = df_j['Nombre'].astype(str).str.strip().tolist() if not df_j.empty else []
+            
+            if not nuevo_u or not nuevo_p:
+                st.warning("⚠️ Debes llenar todos los campos para entrar a la parrilla.")
+            elif nuevo_u.strip() in nombres_existentes:
+                st.error("❌ Ese Alias ya está ocupado por otro piloto.")
+            else:
+                tabla_jugadores.append_row([nuevo_u.strip(), nuevo_p.strip(), escuderia])
+                st.success(f"✅ ¡Bienvenido a la F1, {nuevo_u}! Ahora ve a la pestaña de 'Acceso' para entrar.")
+                st.balloons()
+
+    with tab3:
+        st.title("Recuperar Telemetría")
+        st.info("Escribe tu Alias y si estás en la base de datos, te recordaremos tu clave.")
+        user_olvido = st.text_input("Tu Alias de Piloto:", key="forgot_user")
+        if st.button("🔍 Buscar en el Paddock"):
+            df_j = pd.DataFrame(tabla_jugadores.get_all_records())
+            if not df_j.empty:
+                df_j['Nombre'] = df_j['Nombre'].astype(str).str.strip()
+                match = df_j[df_j['Nombre'] == user_olvido.strip()]
+                if not match.empty:
+                    clave_recuperada = match.iloc[0]['Password']
+                    st.success(f"🔑 Tu contraseña es: **{clave_recuperada}**")
+                else:
+                    st.error("❓ Ese piloto no aparece en nuestros registros.")
 
 # --- 6. APLICACIÓN PRINCIPAL ---
 else:
