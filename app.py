@@ -145,6 +145,7 @@ else:
 
             def get_idx(campo): return pilotos.index(ap_p.get(campo)) if ya_aposto and ap_p.get(campo) in pilotos else None
 
+            # --- TITULOS CON LA HORA EXACTA ---
             q_title = f" ({hora_q_txt} hrs CDMX)" if hora_q_txt else ""
             st.markdown(f"### ⏱️ Calificación{q_title}")
             q1_col, q2_col, q3_col = st.columns(3)
@@ -192,11 +193,10 @@ else:
                 
             res = res.sort_values('Puntos', ascending=False).reset_index(drop=True)
             
-            # --- PUNTOS CENTRADOS ---
-            st.dataframe(res, use_container_width=True, hide_index=True, column_config={
-                "🛡️": st.column_config.ImageColumn(""),
-                "Puntos": st.column_config.NumberColumn(alignment="center")
-            })
+            # --- PUNTOS Y ENCABEZADOS CENTRADOS DE FORMA SEGURA (SIN CRASHEOS) ---
+            estilos_tabla = [dict(selector="th", props=[("text-align", "center")])]
+            res_estilizado = res.style.set_properties(**{'text-align': 'center'}, subset=['Puntos']).set_table_styles(estilos_tabla)
+            st.dataframe(res_estilizado, use_container_width=True, hide_index=True, column_config={"🛡️": st.column_config.ImageColumn("")})
 
     elif menu == "📊 Paddock Detallado":
         st.subheader("🔍 Análisis de Telemetría (Paddock Detallado)")
@@ -217,12 +217,11 @@ else:
                     
                 res = res.sort_values('Puntos', ascending=False).reset_index(drop=True)
                 
-                # --- PUNTOS CENTRADOS ---
-                st.dataframe(res, use_container_width=True, hide_index=True, column_config={
-                    "Puntos": st.column_config.NumberColumn(alignment="center")
-                })
+                # --- PUNTOS Y ENCABEZADOS CENTRADOS DE FORMA SEGURA ---
+                estilos_tabla = [dict(selector="th", props=[("text-align", "center")])]
+                res_estilizado = res.style.set_properties(**{'text-align': 'center'}, subset=['Puntos']).set_table_styles(estilos_tabla)
+                st.dataframe(res_estilizado, use_container_width=True, hide_index=True)
             else:
-                # --- LEYENDA ACTUALIZADA (GRIS en lugar de NEGRO) ---
                 st.markdown("""
                 <div style="text-align: center; margin: 10px 0px 20px 0px; font-size: 1.1rem; background-color: #1e1e1e; padding: 12px; border-radius: 8px; border: 1px solid #333;">
                     <span style="color: #00e676; font-weight: bold;">Verde +3</span> <span style="color: #666; margin: 0 10px;">|</span> 
@@ -267,7 +266,6 @@ else:
                             base = col.split('\n')[0]
                             if base == 'Salado':
                                 real = r_of.get('Salado', '')
-                                # --- NUEVO DISEÑO DEL SALADO ---
                                 if val == real and real != "": styles[i] = 'color: #FFD700; font-weight: bold; text-shadow: 1px 1px 2px #000;'
                                 else: styles[i] = 'color: gray; font-weight: bold;'
                             elif base in r_of:
@@ -278,15 +276,14 @@ else:
                                 else: styles[i] = 'color: #ff5252; font-weight: bold;'
                         return styles
                     
-                    styled_df = df_mostrar.style.apply(style_txt, axis=1).set_properties(**{'text-align': 'center'}, subset=df_mostrar.columns[1:])
+                    # --- PUNTOS Y ENCABEZADOS CENTRADOS DE FORMA SEGURA ---
+                    estilos_tabla = [dict(selector="th", props=[("text-align", "center")])]
+                    styled_df = df_mostrar.style.apply(style_txt, axis=1).set_properties(**{'text-align': 'center'}, subset=df_mostrar.columns[1:]).set_table_styles(estilos_tabla)
                     
-                    # --- PUNTOS CENTRADOS ---
-                    st.dataframe(styled_df, use_container_width=True, hide_index=True, column_config={
-                        "Pts": st.column_config.NumberColumn(alignment="center")
-                    })
+                    st.dataframe(styled_df, use_container_width=True, hide_index=True)
 
     elif menu == "📖 Reglamento Oficial":
-        # --- REGLAMENTO ORIGINAL CONGELADO Y RESTAURADO ---
+        # --- REGLAMENTO ORIGINAL COMPLETO Y CONGELADO ---
         st.header("📜 REGLAMENTO DEPORTIVO SASIANGP 2026")
         st.write("Bienvenidos a la máxima categoría. Aquí venimos a apostar el honor, no a hacer amigos. Lean las reglas a detalle para que luego no anden llorando por los rincones exigiendo puntos que no se ganaron.")
         st.markdown("---")
