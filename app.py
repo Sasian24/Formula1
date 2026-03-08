@@ -40,7 +40,6 @@ pilotos = sorted([
 ])
 
 df_cal_global = pd.DataFrame(tabla_calendario.get_all_records())
-# LIMPIEZA ANTI-ESPACIOS INVISIBLES
 if not df_cal_global.empty:
     df_cal_global.columns = [str(c).strip() for c in df_cal_global.columns]
 lista_carreras_oficial = df_cal_global['Carrera'].tolist() if not df_cal_global.empty else []
@@ -119,14 +118,12 @@ else:
     if menu == "📝 Hacer Apuesta":
         gp_sel = st.selectbox("🌎 Selecciona GP:", lista_carreras_oficial, index=None, placeholder="Elige un Gran Premio...")
         if gp_sel:
-            bq, bc = True, True
-            hora_q_txt = ""
-            hora_c_txt = ""
+            bq, bc, bs = True, True, True
+            hora_q_txt, hora_c_txt, hora_s_txt = "", "", ""
             f = df_cal_global[df_cal_global['Carrera'] == gp_sel]
             es_sprint = False
             
             if not f.empty:
-                # BÚSQUEDA SEGURA ANTI-ESPACIOS
                 if 'Es_Sprint' in f.columns:
                     es_sprint_val = str(f.iloc[0]['Es_Sprint']).strip().upper()
                 else:
@@ -134,22 +131,34 @@ else:
                     
                 es_sprint = es_sprint_val in ['SI', 'SÍ', 'TRUE', '1', 'S']
                 
-                fecha_q_str = f.iloc[0]['Fecha_Qualy']
-                fecha_c_str = f.iloc[0]['Fecha_Carrera']
+                fecha_q_str = f.iloc[0].get('Fecha_Qualy', '')
+                fecha_c_str = f.iloc[0].get('Fecha_Carrera', '')
+                fecha_s_str = f.iloc[0].get('Fecha_Sprint', '') if 'Fecha_Sprint' in f.columns else ""
                 
-                if es_sprint: st.info(f"🕒 **Horarios:** Qualy: {fecha_q_str} | Carrera: {fecha_c_str} (🔥 Fin de Semana SPRINT)")
-                else: st.info(f"🕒 **Horarios:** Qualy: {fecha_q_str} | Carrera: {fecha_c_str}")
+                if es_sprint: 
+                    st.info(f"🕒 **Horarios Oficiales:** Qualy: {fecha_q_str} | Sprint: {fecha_s_str} | Carrera: {fecha_c_str} (🔥 Fin de Semana SPRINT)")
+                else: 
+                    st.info(f"🕒 **Horarios Oficiales:** Qualy: {fecha_q_str} | Carrera: {fecha_c_str}")
 
                 ahora = datetime.utcnow() - timedelta(hours=6)
                 dt_q = pd.to_datetime(fecha_q_str, format="%H:%M %d-%m-%Y", errors='coerce')
                 dt_c = pd.to_datetime(fecha_c_str, format="%H:%M %d-%m-%Y", errors='coerce')
+                dt_s = pd.to_datetime(fecha_s_str, format="%H:%M %d-%m-%Y", errors='coerce')
                 
                 if pd.notna(dt_q):
                     hora_q_txt = dt_q.strftime("%H:%M")
                     if ahora < (dt_q - timedelta(hours=1)): bq = False
+                
                 if pd.notna(dt_c):
                     hora_c_txt = dt_c.strftime("%H:%M")
                     if ahora < (dt_c - timedelta(hours=1)): bc = False
+                
+                if es_sprint:
+                    if pd.notna(dt_s):
+                        hora_s_txt = dt_s.strftime("%H:%M")
+                        if ahora < (dt_s - timedelta(hours=1)): bs = False
+                    else:
+                        bs = bq
                     
             df_q = pd.DataFrame(tabla_quinielas.get_all_records())
             if not df_q.empty: df_q.columns = [str(c).strip() for c in df_q.columns]
@@ -170,7 +179,7 @@ else:
             
             q_selections = [x for x in [q1, q2, q3] if x is not None]
             hay_error_q = len(q_selections) != len(set(q_selections))
-            if hay_error_q: st.error("❌ ¡Bandera Negra! Tienes pilotos repetidos en la Calificación.")
+            if hay_error_q: st.error("❌ ¡Bandera Negra! Tienes pilotos repetidos en la Calificación. Cámbialos.")
 
             st.write("---")
             
@@ -178,15 +187,16 @@ else:
             s1, s2, s3 = None, None, None
             hay_error_s = False
             if es_sprint:
-                st.markdown("### 🔥 Carrera Sprint")
+                s_title = f" ({hora_s_txt} hrs CDMX)" if hora_s_txt else ""
+                st.markdown(f"### 🔥 Carrera Sprint{s_title}")
                 s1_col, s2_col, s3_col = st.columns(3)
-                with s1_col: s1 = st.selectbox("Sprint P1:", pilotos, index=get_idx('Sprint_P1'), key=f"s1_{gp_sel}", placeholder="Elige...", disabled=bq or ya_aposto)
-                with s2_col: s2 = st.selectbox("Sprint P2:", pilotos, index=get_idx('Sprint_P2'), key=f"s2_{gp_sel}", placeholder="Elige...", disabled=bq or ya_aposto)
-                with s3_col: s3 = st.selectbox("Sprint P3:", pilotos, index=get_idx('Sprint_P3'), key=f"s3_{gp_sel}", placeholder="Elige...", disabled=bq or ya_aposto)
+                with s1_col: s1 = st.selectbox("Sprint P1:", pilotos, index=get_idx('Sprint_P1'), key=f"s1_{gp_sel}", placeholder="Elige...", disabled=bs or ya_aposto)
+                with s2_col: s2 = st.selectbox("Sprint P2:", pilotos, index=get_idx('Sprint_P2'), key=f"s2_{gp_sel}", placeholder="Elige...", disabled=bs or ya_aposto)
+                with s3_col: s3 = st.selectbox("Sprint P3:", pilotos, index=get_idx('Sprint_P3'), key=f"s3_{gp_sel}", placeholder="Elige...", disabled=bs or ya_aposto)
                 
                 s_selections = [x for x in [s1, s2, s3] if x is not None]
                 hay_error_s = len(s_selections) != len(set(s_selections))
-                if hay_error_s: st.error("❌ ¡Bandera Negra! Tienes pilotos repetidos en el Sprint.")
+                if hay_error_s: st.error("❌ ¡Bandera Negra! Tienes pilotos repetidos en el Sprint. Cámbialos.")
                 st.write("---")
             
             # --- CARRERA ---
@@ -199,7 +209,7 @@ else:
             
             c_selections = [x for x in [g1, g2, g3] if x is not None]
             hay_error_c = len(c_selections) != len(set(c_selections))
-            if hay_error_c: st.error("❌ ¡Bandera Negra! Tienes pilotos repetidos en el podio de la Carrera.")
+            if hay_error_c: st.error("❌ ¡Bandera Negra! Tienes pilotos repetidos en el podio de la Carrera. Cámbialos.")
 
             st.write("---")
             
