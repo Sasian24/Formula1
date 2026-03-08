@@ -87,7 +87,6 @@ if st.session_state['usuario_activo'] is None:
 
 # --- 6. APLICACIÓN PRINCIPAL ---
 else:
-    # ESTO DEBE LLEVAR 4 ESPACIOS DE SANGRÍA RESPECTO AL ELSE
     es_admin = st.session_state['usuario_activo'] == "Sasian"
 
     with st.sidebar:
@@ -108,83 +107,15 @@ else:
         df_cal = pd.DataFrame(tabla_calendario.get_all_records())
         gp_sel = st.selectbox("🌎 Selecciona Gran Premio:", carreras, index=None, placeholder="Elige un Gran Premio...")
         
-        if gp_sel:
+        if not gp_sel:
+            st.info("👆 Selecciona un Gran Premio para abrir los pits.")
+        else:
             bq, bc = True, True 
             f = df_cal[df_cal['Carrera'] == gp_sel]
             if not f.empty:
                 ahora = datetime.utcnow() - timedelta(hours=6)
                 dt_q = pd.to_datetime(f.iloc[0]['Fecha_Qualy'], format="%H:%M %d-%m-%Y", errors='coerce')
                 dt_c = pd.to_datetime(f.iloc[0]['Fecha_Carrera'], format="%H:%M %d-%m-%Y", errors='coerce')
+                # Mantenemos el ajuste de 2 horas extras por hoy (+1h)
                 if pd.notna(dt_q) and ahora < (dt_q + timedelta(hours=1)): bq = False
-                if pd.notna(dt_c) and ahora < (dt_c + timedelta(hours=1)): bc = False
-
-            df_q = pd.DataFrame(tabla_quinielas.get_all_records())
-            ya_aposto, ap_p = False, {}
-            if not df_q.empty:
-                filtro = df_q[(df_q['Jugador'] == st.session_state['usuario_activo']) & (df_q['Carrera'] == gp_sel)]
-                if not filtro.empty:
-                    ya_aposto, ap_p = True, filtro.iloc[-1].to_dict()
-                    st.info("💡 Parque Cerrado activo. Aquí están tus pronósticos:")
-
-            def get_idx(campo):
-                return pilotos.index(ap_p[campo]) if ya_aposto and ap_p.get(campo) in pilotos else None
-
-            with st.form("apuesta_form"):
-                st.markdown("### ⏱️ Calificación")
-                q1 = st.selectbox("PP1 (Pole):", pilotos, index=get_idx('Qualy_P1'), disabled=bq or ya_aposto)
-                st.write("---")
-                st.markdown("### 🏁 Carrera")
-                c4, c5, c6 = st.columns(3)
-                with c4: g1 = st.selectbox("Ganador (P1):", pilotos, index=get_idx('Carrera_P1'), disabled=bc or ya_aposto)
-                with c5: g2 = st.selectbox("P2:", pilotos, index=get_idx('Carrera_P2'), disabled=bc or ya_aposto)
-                with c6: g3 = st.selectbox("P3:", pilotos, index=get_idx('Carrera_P3'), disabled=bc or ya_aposto)
-                st.write("---")
-                st.markdown("### 🎲 Bonos Especiales")
-                b1, b2 = st.columns(2)
-                with b1: vr = st.selectbox("🚀 Vuelta Rápida:", pilotos, index=get_idx('Vuelta_Rapida'), disabled=bc or ya_aposto)
-                with b2: ab = st.selectbox("💥 Primer Abandono (Opcional):", pilotos, index=get_idx('Primer_Abandono'), disabled=bc or ya_aposto)
-                
-                if not ya_aposto:
-                    if st.form_submit_button("🏎️ Sellar Apuesta"):
-                        v_ab = "🔒 CERRADO" if bc else (ab if ab else "")
-                        fila = [(datetime.utcnow()-timedelta(hours=6)).strftime("%Y-%m-%d %H:%M:%S"), st.session_state['usuario_activo'], gp_sel, q1, "", "", g1, g2, g3, vr, v_ab, 0]
-                        tabla_quinielas.append_row(fila)
-                        st.success("✅ ¡Apuesta sellada!")
-                        st.rerun()
-                else: st.form_submit_button("🔒 Apuesta en Parque Cerrado", disabled=True)
-
-    elif menu == "🏆 El Paddock":
-        st.subheader("Clasificación Mundial")
-        dq = tabla_quinielas.get_all_records()
-        df_j = pd.DataFrame(tabla_jugadores.get_all_records())
-        if dq:
-            df = pd.DataFrame(dq)
-            df['Puntos_Totales'] = pd.to_numeric(df['Puntos_Totales'], errors='coerce').fillna(0)
-            res = df.groupby('Jugador')['Puntos_Totales'].sum().reset_index().sort_values('Puntos_Totales', ascending=False)
-            if not df_j.empty:
-                res = res.merge(df_j[['Nombre', 'Escuderia_Favorita']], left_on='Jugador', right_on='Nombre', how='left')
-                res['🛡️'] = res['Escuderia_Favorita'].map(url_logos).fillna(url_logos["Haas"])
-            st.dataframe(res[['🛡️', 'Jugador', 'Puntos_Totales']], use_container_width=True, hide_index=True, column_config={"🛡️": st.column_config.ImageColumn("")})
-
-    elif menu == "📖 Reglamento Oficial":
-        st.header("📜 REGLAMENTO DEPORTIVO SASIANGP 2026")
-        st.write("Bienvenidos a la máxima categoría. Aquí venimos a apostar el honor.")
-        st.markdown("---")
-        st.markdown("### ⏱️ ARTÍCULO 1: El Reloj No Perdona (Cierre de Pits)")
-        st.info("Se bloquea **EXACTAMENTE 1 HORA ANTES** de la sesión. Ni mandándole WhatsApp a Sasian se abre.")
-        st.markdown("### 🎯 ARTÍCULO 2: El Podio (Precisión Absoluta)")
-        st.success("🥇 Ganador (P1), P2, P3 y Pole: +3 Puntos cada uno. 🚀 VR: +2 Puntos.")
-        st.markdown("### ☠️ ARTÍCULO 3: El Bono 'Salado' (Riesgo Extremo)")
-        st.warning("✅ Acertaste: +5 Puntos. ❌ Fallaste: -2 Puntos.")
-        st.markdown("### ⚖️ ARTÍCULO 4: El Director de Carrera es Dios")
-        st.error("La decisión final de Sasian es absoluta e inapelable.")
-
-    elif menu == "👑 Admin FIA":
-        st.subheader("Control del Director de Carrera")
-        if st.button("⚡ Extraer Telemetría API"):
-            try:
-                r = requests.get("https://api.jolpi.ca/ergast/f1/current/last/results.json").json()
-                res_api = r['MRData']['RaceTable']['Races'][0]['Results']
-                st.session_state['auto_c1'] = traductor_api.get(res_api[0]['Driver']['familyName'], None)
-                st.success("✅ Telemetría sincronizada.")
-            except: st.error("❌ Error API.")
+                if pd.notna(dt_c) and ahora < (dt_c
