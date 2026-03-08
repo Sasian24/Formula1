@@ -68,17 +68,17 @@ if st.session_state['usuario_activo'] is None:
             df_j = pd.DataFrame(tabla_jugadores.get_all_records())
             existentes = df_j['Nombre'].astype(str).str.strip().tolist() if not df_j.empty else []
             if not nu or not np: st.warning("⚠️ Llena todos los campos.")
-            elif nu.strip() in existentes: st.error("❌ Alias ya ocupado.")
+            elif nu.strip() in existentes: st.error("❌ Alias ocupado.")
             else:
                 ahora_mx = datetime.utcnow() - timedelta(hours=6)
                 fila = [ahora_mx.strftime("%Y-%m-%d %H:%M"), nu.strip(), np.strip(), "", "", "", "", "", esc]
                 tabla_jugadores.append_row(fila)
-                st.success(f"✅ Bienvenido {nu}. Ve a 'Acceso'.")
+                st.success(f"✅ ¡Bienvenido {nu}!")
 
     with tab3:
         st.title("Recuperar Telemetría")
-        uo = st.text_input("Tu Alias:", key="f_u")
-        if st.button("🔍 Buscar"):
+        uo = st.text_input("Tu Alias de Piloto:", key="f_u")
+        if st.button("🔍 Buscar en el Paddock"):
             df_j = pd.DataFrame(tabla_jugadores.get_all_records())
             if not df_j.empty:
                 match = df_j[df_j['Nombre'].astype(str).str.strip() == uo.strip()]
@@ -90,8 +90,10 @@ else:
 es_admin = st.session_state['usuario_activo'] == "Sasian"
     with st.sidebar:
         st.markdown(f"### 🏎️ Pits: {st.session_state['usuario_activo']}")
-        menu = st.radio("Navegación", ["📝 Hacer Apuesta", "🏆 El Paddock", "👑 Admin FIA", "📖 Reglamento Oficial"])
-        if st.button("🚪 Salir de Pits"):
+        opc = ["📝 Hacer Apuesta", "🏆 El Paddock", "📖 Reglamento Oficial"]
+        if es_admin: opc.append("👑 Admin FIA")
+        menu = st.radio("Navegación", opc)
+        if st.button("🚪 Salir"):
             st.session_state['usuario_activo'] = None
             st.rerun()
 
@@ -108,7 +110,6 @@ es_admin = st.session_state['usuario_activo'] == "Sasian"
                 ahora = datetime.utcnow() - timedelta(hours=6)
                 dt_q = pd.to_datetime(f.iloc[0]['Fecha_Qualy'], format="%H:%M %d-%m-%Y", errors='coerce')
                 dt_c = pd.to_datetime(f.iloc[0]['Fecha_Carrera'], format="%H:%M %d-%m-%Y", errors='coerce')
-                # Margen de 2 horas por hoy (+1h)
                 if pd.notna(dt_q) and ahora < (dt_q + timedelta(hours=1)): bq = False
                 if pd.notna(dt_c) and ahora < (dt_c + timedelta(hours=1)): bc = False
 
@@ -124,15 +125,16 @@ es_admin = st.session_state['usuario_activo'] == "Sasian"
                 return pilotos.index(ap_p[campo]) if ya_aposto and ap_p.get(campo) in pilotos else None
 
             with st.form("apuesta_form"):
-                q1 = st.selectbox("Pole Position:", pilotos, index=get_idx('Qualy_P1'), disabled=bq or ya_aposto)
-                g1 = st.selectbox("P1 Carrera:", pilotos, index=get_idx('Carrera_P1'), disabled=bc or ya_aposto)
+                st.markdown("### ⏱️ Qualy")
+                q1 = st.selectbox("PP1 (Pole):", pilotos, index=get_idx('Qualy_P1'), disabled=bq or ya_aposto)
+                st.markdown("### 🏁 Carrera")
+                g1 = st.selectbox("P1:", pilotos, index=get_idx('Carrera_P1'), disabled=bc or ya_aposto)
                 g2 = st.selectbox("P2:", pilotos, index=get_idx('Carrera_P2'), disabled=bc or ya_aposto)
                 g3 = st.selectbox("P3:", pilotos, index=get_idx('Carrera_P3'), disabled=bc or ya_aposto)
                 vr = st.selectbox("Vuelta Rápida:", pilotos, index=get_idx('Vuelta_Rapida'), disabled=bc or ya_aposto)
                 ab = st.selectbox("Salado (Abandono):", pilotos, index=get_idx('Primer_Abandono'), disabled=bc or ya_aposto)
-                if not ya_aposto and st.form_submit_button("🏎️ Sellar Apuesta"):
-                    v_ab = "🔒 CERRADO" if bc else (ab if ab else "")
-                    fila = [(datetime.utcnow()-timedelta(hours=6)).strftime("%Y-%m-%d %H:%M"), st.session_state['usuario_activo'], gp_sel, q1, "", "", g1, g2, g3, vr, v_ab, 0]
+                if not ya_aposto and st.form_submit_button("🏎️ Sellar"):
+                    fila = [(datetime.utcnow()-timedelta(hours=6)).strftime("%Y-%m-%d %H:%M"), st.session_state['usuario_activo'], gp_sel, q1, "", "", g1, g2, g3, vr, ab, 0]
                     tabla_quinielas.append_row(fila)
                     st.success("✅ ¡Apuesta sellada!")
                     st.rerun()
@@ -152,21 +154,17 @@ es_admin = st.session_state['usuario_activo'] == "Sasian"
 
     elif menu == "📖 Reglamento Oficial":
         st.header("📜 REGLAMENTO DEPORTIVO SASIANGP 2026")
-        st.markdown("### ⏱️ ARTÍCULO 1: El Reloj No Perdona")
-        st.info("Cierre de pits: 1 HORA ANTES de la sesión.")
-        st.markdown("### 🎯 ARTÍCULO 2: Precisión Absoluta")
-        st.success("P1, P2, P3 y Pole: +3 Puntos cada uno. Vuelta Rápida: +2 Puntos.")
-        st.markdown("### ☠️ ARTÍCULO 3: El Bono 'Salado'")
-        st.warning("Opcional. Acierto: +5 Puntos. Fallo: -2 Puntos.")
-        st.markdown("### ⚖️ ARTÍCULO 4: El Director de Carrera es Dios")
-        st.error("La decisión de Sasian es absoluta e inapelable.")
+        st.info("⏱️ ARTÍCULO 1: Cierre de pits 1 HORA ANTES de la sesión.")
+        st.success("🎯 ARTÍCULO 2: Pole, P1, P2 y P3: +3 pts cada uno. Vuelta rápida: +2 pts.")
+        st.warning("☠️ ARTÍCULO 3: Bono Salado (+5 pts acierto, -2 pts fallo). Es opcional.")
+        st.error("⚖️ ARTÍCULO 4: La decisión del Director de Carrera (Sasian) es ley.")
 
     elif menu == "👑 Admin FIA":
-        st.subheader("Control del Director de Carrera")
+        st.subheader("Control FIA")
         if st.button("⚡ Sincronizar API"):
             try:
                 r = requests.get("https://api.jolpi.ca/ergast/f1/current/last/results.json").json()
                 res_api = r['MRData']['RaceTable']['Races'][0]['Results']
                 st.session_state['auto_c1'] = traductor_api.get(res_api[0]['Driver']['familyName'], None)
-                st.success("✅ Telemetría sincronizada.")
+                st.success("✅ API sincronizada.")
             except: st.error("❌ Error de comunicación.")
