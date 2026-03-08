@@ -145,7 +145,6 @@ else:
 
             def get_idx(campo): return pilotos.index(ap_p.get(campo)) if ya_aposto and ap_p.get(campo) in pilotos else None
 
-            # --- TITULOS CON LA HORA EXACTA ---
             q_title = f" ({hora_q_txt} hrs CDMX)" if hora_q_txt else ""
             st.markdown(f"### ⏱️ Calificación{q_title}")
             q1_col, q2_col, q3_col = st.columns(3)
@@ -192,9 +191,11 @@ else:
                 res = res.rename(columns={'Jugador': 'Piloto', 'Puntos_Totales': 'Puntos'})
                 
             res = res.sort_values('Puntos', ascending=False).reset_index(drop=True)
-            # Solucionado el error de st.column_config.NumberColumn que hacía crashear la app.
+            
+            # --- PUNTOS CENTRADOS ---
             st.dataframe(res, use_container_width=True, hide_index=True, column_config={
-                "🛡️": st.column_config.ImageColumn("")
+                "🛡️": st.column_config.ImageColumn(""),
+                "Puntos": st.column_config.NumberColumn(alignment="center")
             })
 
     elif menu == "📊 Paddock Detallado":
@@ -215,14 +216,19 @@ else:
                     res = res.rename(columns={'Jugador': 'Piloto', 'Puntos_Totales': 'Puntos'})
                     
                 res = res.sort_values('Puntos', ascending=False).reset_index(drop=True)
-                st.dataframe(res, use_container_width=True, hide_index=True)
+                
+                # --- PUNTOS CENTRADOS ---
+                st.dataframe(res, use_container_width=True, hide_index=True, column_config={
+                    "Puntos": st.column_config.NumberColumn(alignment="center")
+                })
             else:
+                # --- LEYENDA ACTUALIZADA (GRIS en lugar de NEGRO) ---
                 st.markdown("""
                 <div style="text-align: center; margin: 10px 0px 20px 0px; font-size: 1.1rem; background-color: #1e1e1e; padding: 12px; border-radius: 8px; border: 1px solid #333;">
                     <span style="color: #00e676; font-weight: bold;">Verde +3</span> <span style="color: #666; margin: 0 10px;">|</span> 
                     <span style="color: #ffb300; font-weight: bold;">Amarillo +1</span> <span style="color: #666; margin: 0 10px;">|</span> 
                     <span style="color: #ff5252; font-weight: bold;">Rojo = 0</span> <span style="color: #666; margin: 0 10px;">|</span> 
-                    <span style="color: black; font-weight: bold; background-color: #d3d3d3; padding: 2px 6px; border-radius: 4px;">Negro -2</span> <span style="color: #666; margin: 0 10px;">|</span> 
+                    <span style="color: gray; font-weight: bold;">Gris -2</span> <span style="color: #666; margin: 0 10px;">|</span> 
                     <span style="color: #FFD700; font-weight: bold; text-shadow: 1px 1px 2px #000;">Dorado +5</span>
                 </div>
                 """, unsafe_allow_html=True)
@@ -261,8 +267,9 @@ else:
                             base = col.split('\n')[0]
                             if base == 'Salado':
                                 real = r_of.get('Salado', '')
+                                # --- NUEVO DISEÑO DEL SALADO ---
                                 if val == real and real != "": styles[i] = 'color: #FFD700; font-weight: bold; text-shadow: 1px 1px 2px #000;'
-                                else: styles[i] = 'color: #000000; font-weight: bold; background-color: #d3d3d3;'
+                                else: styles[i] = 'color: gray; font-weight: bold;'
                             elif base in r_of:
                                 real = r_of[base]
                                 if val == real: styles[i] = 'color: #00e676; font-weight: bold;'
@@ -272,7 +279,11 @@ else:
                         return styles
                     
                     styled_df = df_mostrar.style.apply(style_txt, axis=1).set_properties(**{'text-align': 'center'}, subset=df_mostrar.columns[1:])
-                    st.dataframe(styled_df, use_container_width=True, hide_index=True)
+                    
+                    # --- PUNTOS CENTRADOS ---
+                    st.dataframe(styled_df, use_container_width=True, hide_index=True, column_config={
+                        "Pts": st.column_config.NumberColumn(alignment="center")
+                    })
 
     elif menu == "📖 Reglamento Oficial":
         # --- REGLAMENTO ORIGINAL CONGELADO Y RESTAURADO ---
