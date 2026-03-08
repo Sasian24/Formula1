@@ -1,21 +1,20 @@
 import streamlit as st
 import gspread
-from datetime import datetime, date, timedelta
+from datetime import datetime, timedelta
 import pandas as pd
-import requests  
+import requests
 
-# --- 1. CONFIGURACIÓN VISUAL ---
-st.set_page_config(page_title="Liga SasianGP 2026", page_icon="🏎️", layout="wide") 
+# --- 1. CONFIGURACIÓN ---
+st.set_page_config(page_title="SasianGP 2026", page_icon="🏎️", layout="wide")
 
-# --- 2. CONEXIÓN A BASE DE DATOS ---
+# --- 2. CONEXIÓN A DB ---
 gc = gspread.service_account(filename="Config/credenciales.json")
 sh = gc.open("SasianGP_DB")
 tabla_quinielas = sh.worksheet("Quinielas")
 tabla_jugadores = sh.worksheet("Jugadores")
-tabla_resultados = sh.worksheet("Resultados") 
-tabla_calendario = sh.worksheet("Calendario") 
+tabla_calendario = sh.worksheet("Calendario")
 
-# --- 3. LOGOS Y PILOTOS ---
+# --- 3. DATOS MAESTROS ---
 url_logos = {
     "Red Bull Racing": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/red-bull.png",
     "Ferrari": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/ferrari.png",
@@ -26,8 +25,7 @@ url_logos = {
     "Williams": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/williams.png",
     "RB": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/rb.png",
     "Kick Sauber": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/sauber.png",
-    "Haas": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/haas.png",
-    "Cadillac": "https://www.google.com/s2/favicons?sz=128&domain=cadillac.com"
+    "Haas": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/haas.png"
 }
 
 pilotos = sorted(["Checo Pérez", "Max Verstappen", "Charles Leclerc", "Lewis Hamilton", "Lando Norris", "Oscar Piastri", "George Russell", "Fernando Alonso", "Carlos Sainz", "Franco Colapinto", "Nico Hülkenberg", "Esteban Ocon", "Pierre Gasly", "Alex Albon", "Yuki Tsunoda", "Lance Stroll"])
@@ -35,87 +33,115 @@ carreras = ["1. GP de Australia (Marzo)", "2. GP de China (Marzo)", "3. GP de Ja
 
 traductor_api = {"Verstappen": "Max Verstappen", "Perez": "Checo Pérez", "Leclerc": "Charles Leclerc", "Norris": "Lando Norris", "Sainz": "Carlos Sainz", "Hamilton": "Lewis Hamilton", "Russell": "George Russell", "Piastri": "Oscar Piastri", "Alonso": "Fernando Alonso", "Colapinto": "Franco Colapinto"}
 
-# --- 4. GESTIÓN DE SESIÓN ---
+# --- 4. ESTADO DE SESIÓN ---
 if 'usuario_activo' not in st.session_state: st.session_state['usuario_activo'] = None
-if 'auto_c1' not in st.session_state: st.session_state['auto_c1'] = None
-if 'auto_c2' not in st.session_state: st.session_state['auto_c2'] = None
-if 'auto_c3' not in st.session_state: st.session_state['auto_c3'] = None
+if 'api_res' not in st.session_state: st.session_state['api_res'] = [None, None, None]
 
-# --- 5. INTERFAZ DE ACCESO ---
+# --- 5. LÓGICA DE ACCESO ---
 if st.session_state['usuario_activo'] is None:
-    tab1, tab2, tab3 = st.tabs(["🔐 Acceso", "📝 Registrarse", "🆘 Olvidé mi Clave"])
-    
+    tab1, tab2 = st.tabs(["🔐 Entrar al Paddock", "📝 Registro de Escudería"])
     with tab1:
-        st.title("Acceso - SasianGP")
-        u = st.text_input("Alias de Piloto:", key="l_u")
-        p = st.text_input("Contraseña de Telemetría:", type="password", key="l_p")
-        if st.button("🏁 Arrancar Motores"):
+        u = st.text_input("Piloto:", key="u")
+        p = st.text_input("Clave:", type="password", key="p")
+        if st.button("🏁 Arrancar"):
             df_j = pd.DataFrame(tabla_jugadores.get_all_records())
-            if not df_j.empty:
-                df_j['Nombre'] = df_j['Nombre'].astype(str).str.strip()
-                df_j['Password'] = df_j['Password'].astype(str).str.strip()
-                if not df_j[(df_j['Nombre'] == u.strip()) & (df_j['Password'] == p.strip())].empty:
-                    st.session_state['usuario_activo'] = u.strip()
-                    st.rerun()
-                else: st.error("❌ Acceso Denegado.")
-
+            if not df_j.empty and not df_j[(df_j['Nombre'] == u.strip()) & (df_j['Password'] == p.strip())].empty:
+                st.session_state['usuario_activo'] = u.strip()
+                st.rerun()
+            else: st.error("Acceso denegado.")
     with tab2:
-        st.title("Firma con la Escudería")
-        nu = st.text_input("Alias de Piloto:", key="r_u")
-        np = st.text_input("Contraseña:", type="password", key="r_p")
-        esc = st.selectbox("Escudería:", list(url_logos.keys()), key="r_e")
-        if st.button("✍️ Firmar Contrato"):
-            df_j = pd.DataFrame(tabla_jugadores.get_all_records())
-            existentes = df_j['Nombre'].astype(str).str.strip().tolist() if not df_j.empty else []
-            if not nu or not np: st.warning("⚠️ Llena todos los campos.")
-            elif nu.strip() in existentes: st.error("❌ Alias ya ocupado.")
-            else:
-                ahora_mx = datetime.utcnow() - timedelta(hours=6)
-                fila = [ahora_mx.strftime("%Y-%m-%d %H:%M"), nu.strip(), np.strip(), "", "", "", "", "", esc]
-                tabla_jugadores.append_row(fila)
-                st.success(f"✅ ¡Bienvenido {nu}! Ve a 'Acceso'.")
-
-    with tab3:
-        st.title("Recuperar Telemetría")
-        uo = st.text_input("Tu Alias de Piloto:", key="f_u")
-        if st.button("🔍 Buscar en el Paddock"):
-            df_j = pd.DataFrame(tabla_jugadores.get_all_records())
-            if not df_j.empty:
-                match = df_j[df_j['Nombre'].astype(str).str.strip() == uo.strip()]
-                if not match.empty: st.success(f"🔑 Tu clave es: **{match.iloc[0]['Password']}**")
-                else: st.error("❓ Piloto no encontrado.")
-
-# --- 6. APLICACIÓN PRINCIPAL ---
+        nu = st.text_input("Nuevo Piloto:", key="nu")
+        np = st.text_input("Nueva Clave:", type="password", key="np")
+        ne = st.selectbox("Escudería:", list(url_logos.keys()))
+        if st.button("✍️ Firmar"):
+            ahora = (datetime.utcnow() - timedelta(hours=6)).strftime("%Y-%m-%d %H:%M")
+            tabla_jugadores.append_row([ahora, nu.strip(), np.strip(), "", "", "", "", "", ne])
+            st.success("Registrado. Ve a 'Entrar'.")
 else:
+    # --- 6. INTERFAZ PRINCIPAL ---
     es_admin = st.session_state['usuario_activo'] == "Sasian"
-
     with st.sidebar:
-        st.markdown(f"### 🏎️ Pits: {st.session_state['usuario_activo']}")
-        opciones = ["📝 Hacer Apuesta", "🏆 El Paddock"]
-        if es_admin: opciones.append("👑 Admin FIA")
-        opciones.append("📖 Reglamento Oficial")
-        menu = st.radio("Navegación", opciones)
-        st.write("---")
-        if st.button("🚪 Salir de Pits"):
+        st.title(f"🏎️ {st.session_state['usuario_activo']}")
+        menu = st.radio("Navegación", ["📝 Quiniela", "🏆 Paddock", "👑 Admin FIA", "📖 Reglamento"])
+        if st.button("🚪 Salir"):
             st.session_state['usuario_activo'] = None
             st.rerun()
 
-    st.markdown("""<div style="text-align: center; background: #1e1e1e; padding: 10px; border-radius: 12px; border-bottom: 4px solid #E10600;"><span style="font-family: Impact; font-size: 3rem; color: #E10600; font-style: italic;">F1 SasianGP</span></div>""", unsafe_allow_html=True)
-
-    if menu == "📝 Hacer Apuesta":
-        st.subheader("Tu Pronóstico Oficial")
+    if menu == "📝 Quiniela":
+        st.header("Tus Pronósticos")
         df_cal = pd.DataFrame(tabla_calendario.get_all_records())
-        gp_sel = st.selectbox("🌎 Selecciona Gran Premio:", carreras, index=None, placeholder="Elige un Gran Premio...")
-        
-        if not gp_sel:
-            st.info("👆 Selecciona un Gran Premio para abrir los pits.")
-        else:
-            bq, bc = True, True 
-            f = df_cal[df_cal['Carrera'] == gp_sel]
+        gp = st.selectbox("Gran Premio:", carreras, index=None)
+        if gp:
+            f = df_cal[df_cal['Carrera'] == gp]
+            bq, bc, ahora = True, True, (datetime.utcnow() - timedelta(hours=6))
             if not f.empty:
-                ahora = datetime.utcnow() - timedelta(hours=6)
-                dt_q = pd.to_datetime(f.iloc[0]['Fecha_Qualy'], format="%H:%M %d-%m-%Y", errors='coerce')
-                dt_c = pd.to_datetime(f.iloc[0]['Fecha_Carrera'], format="%H:%M %d-%m-%Y", errors='coerce')
-                # Mantenemos el ajuste de 2 horas extras por hoy (+1h)
-                if pd.notna(dt_q) and ahora < (dt_q + timedelta(hours=1)): bq = False
-                if pd.notna(dt_c) and ahora < (dt_c
+                dt_q = pd.to_datetime(f.iloc[0]['Fecha_Qualy'], format="%H:%M %d-%m-%Y")
+                dt_c = pd.to_datetime(f.iloc[0]['Fecha_Carrera'], format="%H:%M %d-%m-%Y")
+                if ahora < (dt_q + timedelta(hours=1)): bq = False
+                if ahora < (dt_c + timedelta(hours=1)): bc = False
+            
+            df_q = pd.DataFrame(tabla_quinielas.get_all_records())
+            ya_aposto = not df_q[(df_q['Jugador'] == st.session_state['usuario_activo']) & (df_q['Carrera'] == gp)].empty
+            
+            with st.form("f_q"):
+                q1 = st.selectbox("Pole Position:", pilotos, disabled=bq or ya_aposto)
+                g1 = st.selectbox("Ganador P1:", pilotos, disabled=bc or ya_aposto)
+                g2 = st.selectbox("P2:", pilotos, disabled=bc or ya_aposto)
+                g3 = st.selectbox("P3:", pilotos, disabled=bc or ya_aposto)
+                vr = st.selectbox("Vuelta Rápida:", pilotos, disabled=bc or ya_aposto)
+                ab = st.selectbox("Bono Salado (Abandono):", pilotos, disabled=bc or ya_aposto)
+                if not ya_aposto and st.form_submit_button("🏁 Sellar"):
+                    tabla_quinielas.append_row([ahora.strftime("%Y-%m-%d %H:%M"), st.session_state['usuario_activo'], gp, q1, "", "", g1, g2, g3, vr, ab, 0])
+                    st.success("Apuesta sellada.")
+                    st.rerun()
+            if ya_aposto: st.warning("Pits cerrados para este GP.")
+
+    elif menu == "🏆 Paddock":
+        st.header("Tabla Mundial")
+        df_q = pd.DataFrame(tabla_quinielas.get_all_records())
+        if not df_q.empty:
+            df_q['Puntos_Totales'] = pd.to_numeric(df_q['Puntos_Totales'], errors='coerce').fillna(0)
+            res = df_q.groupby('Jugador')['Puntos_Totales'].sum().reset_index().sort_values('Puntos_Totales', ascending=False)
+            st.dataframe(res, use_container_width=True, hide_index=True)
+
+    elif menu == "📖 Reglamento":
+        st.header("Reglamento SasianGP")
+        st.success("🎯 Aciertos P1, P2, P3 y Pole: +3 pts cada uno. Vuelta Rápida: +2 pts.")
+        st.warning("☠️ Bono Salado: +5 pts si aciertas el abandono, -2 pts si fallas.")
+        st.info("⏱️ Cierre: 1 hora antes de la sesión.")
+
+    elif menu == "👑 Admin FIA" and es_admin:
+        st.header("Control de Carrera")
+        if st.button("📡 Sincronizar API"):
+            try:
+                r = requests.get("https://api.jolpi.ca/ergast/f1/current/last/results.json").json()
+                res = r['MRData']['RaceTable']['Races'][0]['Results']
+                st.session_state['api_res'] = [traductor_api.get(res[i]['Driver']['familyName'], None) for i in range(3)]
+                st.success("Telemetría lista.")
+            except: st.error("Fallo de conexión API.")
+        
+        with st.form("fia"):
+            sel_gp = st.selectbox("Calificar GP:", carreras)
+            rq = st.selectbox("Pole Real:", pilotos)
+            rv = st.selectbox("VR Real:", pilotos)
+            ra = st.selectbox("Salado Real:", pilotos)
+            c1, c2, c3 = st.columns(3)
+            with c1: rg1 = st.selectbox("P1 Real:", pilotos, index=pilotos.index(st.session_state['api_res'][0]) if st.session_state['api_res'][0] in pilotos else 0)
+            with c2: rg2 = st.selectbox("P2 Real:", pilotos, index=pilotos.index(st.session_state['api_res'][1]) if st.session_state['api_res'][1] in pilotos else 0)
+            with c3: rg3 = st.selectbox("P3 Real:", pilotos, index=pilotos.index(st.session_state['api_res'][2]) if st.session_state['api_res'][2] in pilotos else 0)
+            
+            if st.form_submit_button("⚖️ Repartir Puntos"):
+                aps = tabla_quinielas.get_all_records()
+                for i, ap in enumerate(aps, start=2):
+                    if ap['Carrera'] == sel_gp:
+                        pts = 0
+                        if ap['Qualy_P1'] == rq: pts += 3
+                        if ap['Carrera_P1'] == rg1: pts += 3
+                        if ap['Carrera_P2'] == rg2: pts += 3
+                        if ap['Carrera_P3'] == rg3: pts += 3
+                        if ap['Vuelta_Rapida'] == rv: pts += 2
+                        if str(ap['Primer_Abandono']).strip():
+                            if ap['Primer_Abandono'] == ra: pts += 5
+                            else: pts -= 2
+                        tabla_quinielas.update_cell(i, 12, pts)
+                st.success("Puntos actualizados.")
