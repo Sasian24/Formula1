@@ -30,7 +30,6 @@ url_logos = {
     "Cadillac": "https://www.google.com/s2/favicons?sz=128&domain=cadillac.com"
 }
 
-# La parrilla oficial de 22 pilotos para 2026
 pilotos = sorted([
     "Checo Pérez", "Max Verstappen", "Charles Leclerc", "Lewis Hamilton", 
     "Lando Norris", "Oscar Piastri", "George Russell", "Fernando Alonso", 
@@ -42,7 +41,6 @@ pilotos = sorted([
 
 carreras = ["1. GP de Australia (Marzo)", "2. GP de China (Marzo)", "3. GP de Japón (Marzo)", "4. GP de Bahréin (Abril)", "5. GP de Arabia Saudita (Abril)", "6. GP de Miami (Mayo)", "7. GP de Canadá (Mayo)", "8. GP de Mónaco (Junio)", "9. GP de España - Barcelona (Junio)", "10. GP de Austria (Junio)", "11. GP de Gran Bretaña (Julio)", "12. GP de Bélgica (Julio)", "13. GP de Hungría (Julio)", "14. GP de Países Bajos (Agosto)", "15. GP de Italia - Monza (Septiembre)", "16. GP de España - Madrid (Septiembre)", "17. GP de Azerbaiyán (Septiembre)", "18. GP de Singapur (Octubre)", "19. GP de Estados Unidos - Austin (Octubre)", "20. GP de México (Oct-Nov)", "21. GP de Brasil (Noviembre)", "22. GP de Las Vegas (Noviembre)", "23. GP de Qatar (Noviembre)", "24. GP de Abu Dhabi (Diciembre)"]
 
-# Traductor actualizado para que la API de la FIA reconozca a los novatos
 traductor_api = {
     "Verstappen": "Max Verstappen", "Perez": "Checo Pérez", "Leclerc": "Charles Leclerc", 
     "Norris": "Lando Norris", "Sainz": "Carlos Sainz", "Hamilton": "Lewis Hamilton", 
@@ -53,6 +51,7 @@ traductor_api = {
     "Ocon": "Esteban Ocon", "Gasly": "Pierre Gasly", "Albon": "Alex Albon", 
     "Stroll": "Lance Stroll", "Bottas": "Valtteri Bottas"
 }
+
 # --- 4. GESTIÓN DE SESIÓN ---
 if 'usuario_activo' not in st.session_state: 
     st.session_state['usuario_activo'] = None
@@ -130,13 +129,12 @@ else:
 
     st.markdown("""<div style="text-align: center; background: #1e1e1e; padding: 10px; border-radius: 12px; border-bottom: 4px solid #E10600;"><span style="font-family: Impact; font-size: 3rem; color: #E10600; font-style: italic;">F1 SasianGP</span></div>""", unsafe_allow_html=True)
 
-if menu == "📝 Hacer Apuesta":
+    if menu == "📝 Hacer Apuesta":
         st.subheader("Tu Pronóstico Oficial")
         df_cal = pd.DataFrame(tabla_calendario.get_all_records())
         gp_sel = st.selectbox("🌎 Selecciona Gran Premio:", carreras, index=None, placeholder="Elige un Gran Premio...")
         
         if gp_sel:
-            # --- EXCEPCIÓN DEL DIRECTOR DE CARRERA: PITS ABIERTOS POR HOY ---
             bq, bc = False, False 
             
             df_q = pd.DataFrame(tabla_quinielas.get_all_records())
@@ -147,49 +145,46 @@ if menu == "📝 Hacer Apuesta":
                     ya_aposto, ap_p = True, filtro.iloc[-1].to_dict()
                     st.info("💡 Detecté una prueba guardada, pero los candados están apagados por hoy. Puedes capturar libremente.")
 
-            # Función para que por defecto cargue pilotos diferentes (índices 0, 1 y 2)
             def get_idx(campo, default_idx):
                 if ya_aposto and ap_p.get(campo) in pilotos:
                     return pilotos.index(ap_p.get(campo))
                 return default_idx
 
-            with st.form("apuesta_form"):
-                st.markdown("### ⏱️ Calificación")
-                q1_col, q2_col, q3_col = st.columns(3)
-                with q1_col: q1 = st.selectbox("PP1 (Pole):", pilotos, index=get_idx('Qualy_P1', 0), disabled=bq)
-                with q2_col: q2 = st.selectbox("Qualy P2:", pilotos, index=get_idx('Qualy_P2', 1), disabled=bq)
-                with q3_col: q3 = st.selectbox("Qualy P3:", pilotos, index=get_idx('Qualy_P3', 2), disabled=bq)
-                
-                st.write("---")
-                st.markdown("### 🏁 Carrera")
-                c4, c5, c6 = st.columns(3)
-                with c4: g1 = st.selectbox("Ganador (P1):", pilotos, index=get_idx('Carrera_P1', 0), disabled=bc)
-                with c5: g2 = st.selectbox("Segundo (P2):", pilotos, index=get_idx('Carrera_P2', 1), disabled=bc)
-                with c6: g3 = st.selectbox("Tercer (P3):", pilotos, index=get_idx('Carrera_P3', 2), disabled=bc)
-                
-                st.write("---")
-                st.markdown("### 🎲 Bonos Especiales")
-                b1, b2 = st.columns(2)
-                with b1: vr = st.selectbox("🚀 Vuelta Rápida:", pilotos, index=get_idx('Vuelta_Rapida', 0), disabled=bc)
-                
-                # El salado queda en blanco por defecto o carga el previo
-                idx_ab = pilotos.index(ap_p.get('Primer_Abandono')) if ya_aposto and ap_p.get('Primer_Abandono') in pilotos else None
-                with b2: ab = st.selectbox("💥 Primer Abandono (Opcional):", pilotos, index=idx_ab, placeholder="Ninguno", disabled=bc)
-                
-                enviado = st.form_submit_button("🏎️ Sellar Apuesta / Actualizar")
+            st.markdown("### ⏱️ Calificación")
+            q1_col, q2_col, q3_col = st.columns(3)
+            with q1_col: q1 = st.selectbox("PP1 (Pole):", pilotos, index=get_idx('Qualy_P1', 0), disabled=bq)
+            with q2_col: q2 = st.selectbox("Qualy P2:", pilotos, index=get_idx('Qualy_P2', 1), disabled=bq)
+            with q3_col: q3 = st.selectbox("Qualy P3:", pilotos, index=get_idx('Qualy_P3', 2), disabled=bq)
+            
+            qualy_ok = len(set([q1, q2, q3])) == 3
+            if not qualy_ok:
+                st.error("❌ ¡Bandera Negra! Tienes pilotos repetidos en la Calificación. Cámbialos.")
 
-            # --- LA REVISIÓN DEL COMISARIO (BANDERA NEGRA) ---
-            if enviado:
-                if len(set([q1, q2, q3])) < 3:
-                    st.error("❌ ¡Bandera Negra! Tienes pilotos repetidos en la Calificación. Corrige y vuelve a sellar.")
-                elif len(set([g1, g2, g3])) < 3:
-                    st.error("❌ ¡Bandera Negra! Tienes pilotos repetidos en el podio de la Carrera. Corrige y vuelve a sellar.")
-                else:
-                    v_ab = "🔒 CERRADO" if bc else (ab if ab else "")
-                    fila = [(datetime.utcnow()-timedelta(hours=6)).strftime("%Y-%m-%d %H:%M:%S"), st.session_state['usuario_activo'], gp_sel, q1, q2, q3, g1, g2, g3, vr, v_ab, 0]
-                    tabla_quinielas.append_row(fila)
-                    st.success("✅ ¡Apuesta sellada con éxito!")
-                    st.rerun()
+            st.write("---")
+            st.markdown("### 🏁 Carrera")
+            c4, c5, c6 = st.columns(3)
+            with c4: g1 = st.selectbox("Ganador (P1):", pilotos, index=get_idx('Carrera_P1', 0), disabled=bc)
+            with c5: g2 = st.selectbox("Segundo (P2):", pilotos, index=get_idx('Carrera_P2', 1), disabled=bc)
+            with c6: g3 = st.selectbox("Tercer (P3):", pilotos, index=get_idx('Carrera_P3', 2), disabled=bc)
+            
+            carrera_ok = len(set([g1, g2, g3])) == 3
+            if not carrera_ok:
+                st.error("❌ ¡Bandera Negra! Tienes pilotos repetidos en la Carrera. Cámbialos.")
+
+            st.write("---")
+            st.markdown("### 🎲 Bonos Especiales")
+            b1, b2 = st.columns(2)
+            with b1: vr = st.selectbox("🚀 Vuelta Rápida:", pilotos, index=get_idx('Vuelta_Rapida', 0), disabled=bc)
+            
+            idx_ab = pilotos.index(ap_p.get('Primer_Abandono')) if ya_aposto and ap_p.get('Primer_Abandono') in pilotos else None
+            with b2: ab = st.selectbox("💥 Primer Abandono (Opcional):", pilotos, index=idx_ab, placeholder="Ninguno", disabled=bc)
+            
+            if st.button("🏎️ Sellar Apuesta / Actualizar", disabled=not (qualy_ok and carrera_ok)):
+                v_ab = "🔒 CERRADO" if bc else (ab if ab else "")
+                fila = [(datetime.utcnow()-timedelta(hours=6)).strftime("%Y-%m-%d %H:%M:%S"), st.session_state['usuario_activo'], gp_sel, q1, q2, q3, g1, g2, g3, vr, v_ab, 0]
+                tabla_quinielas.append_row(fila)
+                st.success("✅ ¡Apuesta sellada con éxito!")
+                st.rerun()
 
     elif menu == "🏆 El Paddock":
         st.subheader("Clasificación Mundial del Campeonato")
@@ -209,11 +204,11 @@ if menu == "📝 Hacer Apuesta":
         st.write("Bienvenidos a la máxima categoría. Aquí venimos a apostar el honor, no a hacer amigos. Lean las reglas a detalle para que luego no anden llorando por los rincones exigiendo puntos que no se ganaron.")
         st.markdown("---")
         st.markdown("### ⏱️ ARTÍCULO 1: El Reloj No Perdona (Cierre de Pits)")
-        st.info("El sistema cuenta con un **Reloj Suizo** automático en formato de 24 hrs. \n* **Calificación (Qualy):** Se bloquea **EXACTAMENTE 1 HORA ANTES** de que los autos salgan a la pista.\n* **Carrera:** Se bloquea **EXACTAMENTE 1 HORA ANTES** del semáforo en verde.\n* **Excepciones:** NINGUNA. Si entras a la app 59 minutos antes, las cajitas estarán en gris y te vas con 0 puntos. Ni mandándole WhatsApp a Sasian se abre.")
+        st.info("El sistema cuenta con un **Reloj Suizo** automático en formato de 24 hrs. \\n* **Calificación (Qualy):** Se bloquea **EXACTAMENTE 1 HORA ANTES** de que los autos salgan a la pista.\\n* **Carrera:** Se bloquea **EXACTAMENTE 1 HORA ANTES** del semáforo en verde.\\n* **Excepciones:** NINGUNA. Si entras a la app 59 minutos antes, las cajitas estarán en gris y te vas con 0 puntos.")
         st.markdown("### 🎯 ARTÍCULO 2: El Podio (Precisión Absoluta)")
-        st.success("Aquí no hay premios de consolación por 'casi' atinarle. O le das a la posición exacta o tienes cero.\n* 🥇 **Ganador (P1):** +3 Puntos.\n* 🥈 **Segundo (P2):** +3 Puntos.\n* 🥉 **Tercer (P3):** +3 Puntos.\n* ⏱️ **Pole Position (Qualy P1):** +3 Puntos.\n* 🚀 **Vuelta Rápida:** +2 Puntos si adivinas quién hace el giro más rápido el domingo.")
+        st.success("Aquí no hay premios de consolación por 'casi' atinarle. O le das a la posición exacta o tienes cero.\\n* 🥇 **Ganador (P1):** +3 Puntos.\\n* 🥈 **Segundo (P2):** +3 Puntos.\\n* 🥉 **Tercer (P3):** +3 Puntos.\\n* ⏱️ **Pole Position (Qualy P1):** +3 Puntos.\\n* 🚀 **Vuelta Rápida:** +2 Puntos si adivinas quién hace el giro más rápido el domingo.")
         st.markdown("### ☠️ ARTÍCULO 3: El Bono 'Salado' (Riesgo Extremo)")
-        st.warning("Esta apuesta es **OPCIONAL**.\n* ✅ **Si Acertaste:** Si tu piloto es el primero en abandonar, eres un genio del mal y te llevas **+5 Puntos** directos.\n* ❌ **Si Fallaste:** Si sobrevive o alguien más abandona antes, te castigamos con **-2 Puntos**.\n* 🛡️ **Tip:** Dejar el espacio en blanco es totalmente válido y te salva de perder puntos.")
+        st.warning("Esta apuesta es **OPCIONAL**.\\n* ✅ **Si Acertaste:** Si tu piloto es el primero en abandonar, eres un genio del mal y te llevas **+5 Puntos** directos.\\n* ❌ **Si Fallaste:** Si sobrevive o alguien más abandona antes, te castigamos con **-2 Puntos**.\\n* 🛡️ **Tip:** Dejar el espacio en blanco es totalmente válido y te salva de perder puntos.")
         st.markdown("### ⚖️ ARTÍCULO 4: El Director de Carrera es Dios")
         st.error("Los resultados son inyectados directamente por la telemetría oficial de la API y validados por el mismísimo **Sasian**. La decisión final es absoluta e inapelable.")
 
@@ -254,7 +249,6 @@ if menu == "📝 Hacer Apuesta":
             with b2: rab = st.selectbox("Salado Real:", pilotos)
 
             if st.form_submit_button("⚖️ Repartir Puntos"):
-                # Se envían los 3 datos de Qualy al registro de resultados
                 tabla_resultados.append_row([sel_car, rq1, rq2, rq3, rg1, rg2, rg3, rvr, rab])
                 aps = tabla_quinielas.get_all_records()
                 for i, ap in enumerate(aps, start=2):
