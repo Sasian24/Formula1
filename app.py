@@ -5,15 +5,32 @@ import pandas as pd
 import requests
 
 # --- 1. CONFIGURACIÓN VISUAL ---
-st.set_page_config(page_title="Liga SasianGP 2026", page_icon="🏎️", layout="wide") 
+st.set_page_config(page_title="Liga SasianGP 2026 - LIGAS PRIVADAS", page_icon="🏎️", layout="wide") 
 
-# --- 2. CONEXIÓN A BASE DE DATOS ---
-gc = gspread.service_account(filename="Config/credenciales.json")
-sh = gc.open("SasianGP_DB")
+# --- 2. CONEXIÓN A BASE DE DATOS (SISTEMA ANTICOLAPSO) ---
+@st.cache_resource
+def init_gspread():
+    gc = gspread.service_account(filename="Config/credenciales.json")
+    return gc.open("SasianGP_DB")
+
+sh = init_gspread()
 tabla_quinielas = sh.worksheet("Quinielas")
 tabla_jugadores = sh.worksheet("Jugadores")
 tabla_resultados = sh.worksheet("Resultados") 
 tabla_calendario = sh.worksheet("Calendario") 
+
+# --- MEMORIA CACHÉ PARA EVITAR EL ERROR 429 DE GOOGLE ---
+@st.cache_data(ttl=60)
+def fetch_data_jugadores(): return pd.DataFrame(tabla_jugadores.get_all_records())
+
+@st.cache_data(ttl=60)
+def fetch_data_quinielas(): return pd.DataFrame(tabla_quinielas.get_all_records())
+
+@st.cache_data(ttl=120)
+def fetch_data_calendario(): return pd.DataFrame(tabla_calendario.get_all_records())
+
+@st.cache_data(ttl=60)
+def fetch_vals_resultados(): return tabla_resultados.get_all_values()
 
 # --- 3. LOGOS Y PILOTOS ---
 url_logos = {
@@ -39,7 +56,7 @@ pilotos = sorted([
     "Liam Lawson", "Gabriel Bortoleto"
 ])
 
-df_cal_global = pd.DataFrame(tabla_calendario.get_all_records())
+df_cal_global = fetch_data_calendario()
 if not df_cal_global.empty:
     df_cal_global.columns = [str(c).strip() for c in df_cal_global.columns]
 lista_carreras_oficial = df_cal_global['Carrera'].tolist() if not df_cal_global.empty else []
@@ -57,6 +74,7 @@ traductor_api = {
 
 # --- 4. GESTIÓN DE SESIÓN ---
 if 'usuario_activo' not in st.session_state: st.session_state['usuario_activo'] = None
+if 'liga_activa' not in st.session_state: st.session_state['liga_activa'] = None
 if 'auto_c1' not in st.session_state: st.session_state['auto_c1'] = None
 if 'auto_c2' not in st.session_state: st.session_state['auto_c2'] = None
 if 'auto_c3' not in st.session_state: st.session_state['auto_c3'] = None
@@ -68,27 +86,56 @@ if st.session_state['usuario_activo'] is None:
         u = st.text_input("Alias de Piloto:", key="l_u")
         p = st.text_input("Contraseña:", type="password", key="l_p")
         if st.button("🏁 Arrancar Motores"):
-            df_j = pd.DataFrame(tabla_jugadores.get_all_records())
-            if not df_j[(df_j['Nombre']==u.strip()) & (df_j['Password']==p.strip())].empty:
+            df_j = fetch_data_jugadores()
+            user_match = df_j[(df_j['Nombre']==u.strip()) & (df_j['Password']==p.strip())]
+            if not user_match.empty:
                 st.session_state['usuario_activo'] = u.strip()
+                st.session_state['liga_activa'] = str(user_match.iloc[0].get('Liga', 'SasianVIP')).strip()
                 st.rerun()
             else: st.error("❌ Acceso Denegado.")
     with tab2:
         nu = st.text_input("Alias *", key="r_u")
         np = st.text_input("Contraseña *", type="password", key="r_p")
+        
+        # OBTENEMOS LIGAS DESDE LA CACHÉ
+        df_j_exist = fetch_data_jugadores()
+        if not df_j_exist.empty and 'Liga' in df_j_exist.columns:
+            ligas_existentes = sorted([str(l).strip() for l in df_j_exist['Liga'].unique() if str(l).strip() != ""])
+        else:
+            ligas_existentes = []
+            
+        opciones_liga = ligas_existentes + ["Otra (Crear Nueva)"]
+        n_liga_sel = st.selectbox("Selecciona tu Liga *", opciones_liga, index=None, placeholder="Elige la liga de tus amigos...")
+        
+        n_liga_final = ""
+        if n_liga_sel == "Otra (Crear Nueva)":
+            n_liga_final = st.text_input("Nombre de tu Nueva Liga *", key="r_lig_nueva").strip()
+        elif n_liga_sel:
+            n_liga_final = n_liga_sel
+
         wp = st.text_input("WhatsApp", key="r_w")
         mail = st.text_input("Correo", key="r_m")
         cumple = st.date_input("Cumpleaños", value=None)
         pil_f = st.selectbox("Piloto Favorito", pilotos, index=None)
         esc = st.selectbox("Escudería *", list(url_logos.keys()))
+        
         if st.button("✍️ Firmar Contrato"):
-            ahora_mx = (datetime.utcnow() - timedelta(hours=6)).strftime("%Y-%m-%d %H:%M:%S")
-            tabla_jugadores.append_row([ahora_mx, nu.strip(), np.strip(), wp.strip(), mail.strip(), cumple.strftime("%Y-%m-%d") if cumple else "", pil_f if pil_f else "", "", esc])
-            st.success("✅ ¡Bienvenido!")
+            if not nu or not np or not esc or not n_liga_final:
+                st.error("⚠️ Llena todos los campos obligatorios (*).")
+            else:
+                ahora_mx = (datetime.utcnow() - timedelta(hours=6)).strftime("%Y-%m-%d %H:%M:%S")
+                tabla_jugadores.append_row([ahora_mx, nu.strip(), np.strip(), wp.strip(), mail.strip(), cumple.strftime("%Y-%m-%d") if cumple else "", pil_f if pil_f else "", "", esc, n_liga_final])
+                st.cache_data.clear() # Limpiamos caché para que lea el nuevo usuario
+                
+                # --- AUTO LOGIN INMEDIATO ---
+                st.session_state['usuario_activo'] = nu.strip()
+                st.session_state['liga_activa'] = n_liga_final
+                st.rerun() # Brinco directo a la app
+                
     with tab3:
         uo = st.text_input("Alias para recuperar:", key="f_u")
         if st.button("🔍 Buscar"):
-            df_j = pd.DataFrame(tabla_jugadores.get_all_records())
+            df_j = fetch_data_jugadores()
             match = df_j[df_j['Nombre'] == uo.strip()]
             if not match.empty: st.success(f"🔑 Tu clave: {match.iloc[0]['Password']}")
             else: st.error("No encontrado.")
@@ -98,12 +145,14 @@ else:
     es_admin = st.session_state['usuario_activo'] == "Sasian"
     with st.sidebar:
         st.markdown(f"### 🏎️ Pits: {st.session_state['usuario_activo']}")
+        st.markdown(f"**🏆 Liga:** {st.session_state['liga_activa']}")
+        st.markdown("---")
         menu = st.radio("Navegación", ["📝 Hacer Apuesta", "🏆 El Paddock", "📊 Paddock Detallado", "👑 Admin FIA", "📖 Reglamento Oficial"])
         if st.button("🚪 Salir"):
             st.session_state['usuario_activo'] = None
+            st.session_state['liga_activa'] = None
             st.rerun()
 
-    # --- BANNER ORIGINAL RESTAURADO (CONGELADO) ---
     st.markdown("""
         <div style="display: flex; justify-content: space-between; align-items: center; background: #1e1e1e; padding: 10px 20px; border-radius: 12px; border-bottom: 4px solid #E10600; margin-bottom: 20px;">
             <span style="font-size: 2.5rem;">🏁</span>
@@ -160,7 +209,7 @@ else:
                     else:
                         bs = bq
                     
-            df_q = pd.DataFrame(tabla_quinielas.get_all_records())
+            df_q = fetch_data_quinielas()
             if not df_q.empty: df_q.columns = [str(c).strip() for c in df_q.columns]
             
             filtro = df_q[(df_q['Jugador'] == st.session_state['usuario_activo']) & (df_q['Carrera'] == gp_sel)]
@@ -169,7 +218,6 @@ else:
 
             def get_idx(campo): return pilotos.index(ap_p.get(campo)) if ya_aposto and ap_p.get(campo) in pilotos else None
 
-            # --- QUALY ---
             q_title = f" ({hora_q_txt} hrs CDMX)" if hora_q_txt else ""
             st.markdown(f"### ⏱️ Calificación{q_title}")
             q1_col, q2_col, q3_col = st.columns(3)
@@ -183,7 +231,6 @@ else:
 
             st.write("---")
             
-            # --- SPRINT (DINÁMICO) ---
             s1, s2, s3 = None, None, None
             hay_error_s = False
             if es_sprint:
@@ -199,7 +246,6 @@ else:
                 if hay_error_s: st.error("❌ ¡Bandera Negra! Tienes pilotos repetidos en el Sprint. Cámbialos.")
                 st.write("---")
             
-            # --- CARRERA ---
             c_title = f" ({hora_c_txt} hrs CDMX)" if hora_c_txt else ""
             st.markdown(f"### 🏁 Carrera Principal{c_title}")
             c1_col, c2_col, c3_col = st.columns(3)
@@ -213,7 +259,6 @@ else:
 
             st.write("---")
             
-            # --- BONOS ---
             st.markdown("### 🎲 Bonos Especiales")
             b1_col, b2_col, b3_col = st.columns(3)
             with b1_col: vr = st.selectbox("🚀 VR:", pilotos, index=get_idx('Vuelta_Rapida'), key=f"v_{gp_sel}", placeholder="Elige...", disabled=bc or ya_aposto)
@@ -232,15 +277,23 @@ else:
                     v_s1, v_s2, v_s3 = s1 if s1 else "", s2 if s2 else "", s3 if s3 else ""
                     fila_guardar = [(datetime.utcnow()-timedelta(hours=6)).strftime("%Y-%m-%d %H:%M:%S"), st.session_state['usuario_activo'], gp_sel, q1, q2, q3, v_s1, v_s2, v_s3, g1, g2, g3, vr, pdia, ab if ab else "", 0]
                     tabla_quinielas.append_row(fila_guardar)
+                    st.cache_data.clear() # Limpiamos caché tras apostar
                     st.success("✅ ¡Apuesta sellada con éxito!")
                     st.rerun()
 
     elif menu == "🏆 El Paddock":
-        st.subheader("Clasificación Mundial del Campeonato")
-        df_q = pd.DataFrame(tabla_quinielas.get_all_records())
-        df_j = pd.DataFrame(tabla_jugadores.get_all_records())
+        st.subheader(f"Clasificación Mundial - Liga: {st.session_state['liga_activa']}")
+        df_q = fetch_data_quinielas()
+        df_j = fetch_data_jugadores()
+        
+        if not df_j.empty and 'Liga' in df_j.columns:
+            df_j = df_j[df_j['Liga'].astype(str).str.strip() == st.session_state['liga_activa']]
+        jugadores_de_mi_liga = df_j['Nombre'].tolist() if not df_j.empty else []
+
         if not df_q.empty:
             df_q.columns = [str(c).strip() for c in df_q.columns]
+            df_q = df_q[df_q['Jugador'].isin(jugadores_de_mi_liga)]
+            
             df_q['Puntos_Totales'] = pd.to_numeric(df_q.get('Puntos_Totales', 0), errors='coerce').fillna(0)
             res = df_q.groupby('Jugador')['Puntos_Totales'].sum().reset_index()
             if not df_j.empty:
@@ -273,13 +326,21 @@ else:
             st.markdown(html_table, unsafe_allow_html=True)
 
     elif menu == "📊 Paddock Detallado":
-        st.subheader("🔍 Análisis de Telemetría (Paddock Detallado)")
-        df_q = pd.DataFrame(tabla_quinielas.get_all_records())
+        st.subheader(f"🔍 Análisis de Telemetría - Liga: {st.session_state['liga_activa']}")
+        df_q = fetch_data_quinielas()
+        df_j_full = fetch_data_jugadores()
+        
+        df_j = df_j_full.copy()
+        if not df_j.empty and 'Liga' in df_j.columns:
+            df_j = df_j[df_j['Liga'].astype(str).str.strip() == st.session_state['liga_activa']]
+        jugadores_de_mi_liga = df_j['Nombre'].tolist() if not df_j.empty else []
+
         if not df_q.empty:
             df_q.columns = [str(c).strip() for c in df_q.columns]
+            df_q = df_q[df_q['Jugador'].isin(jugadores_de_mi_liga)]
+
             op_v = st.selectbox("Ver:", ["🏆 Total"] + lista_carreras_oficial)
             if op_v == "🏆 Total":
-                df_j = pd.DataFrame(tabla_jugadores.get_all_records())
                 df_q['Puntos_Totales'] = pd.to_numeric(df_q.get('Puntos_Totales', 0), errors='coerce').fillna(0)
                 res = df_q.groupby('Jugador')['Puntos_Totales'].sum().reset_index()
                 
@@ -327,7 +388,7 @@ else:
 
                 if not df_f.empty:
                     def ac_n(n): return str(n).split()[-1] if (pd.notna(n) and " " in str(n)) else str(n)
-                    todos_res = tabla_resultados.get_all_values()
+                    todos_res = fetch_vals_resultados()
                     r_of = {}
                     for fila in reversed(todos_res):
                         if len(fila) >= 13 and fila[0] == op_v:
@@ -432,7 +493,7 @@ else:
             if 'Es_Sprint' in f_cal.columns:
                 es_sprint = str(f_cal.iloc[0]['Es_Sprint']).strip().upper() in ['SI', 'SÍ', 'TRUE', '1', 'S']
         
-        todos_resultados = tabla_resultados.get_all_values()
+        todos_resultados = fetch_vals_resultados()
         res_previos = {}
         for fila in reversed(todos_resultados):
             if len(fila) >= 13 and fila[0] == sel_car:
@@ -493,9 +554,10 @@ else:
                 v_rvr, v_rpd, v_abr = rvr if rvr else "", rpd if rpd else "", abr if abr else ""
 
                 tabla_resultados.append_row([sel_car, v_rq1, v_rq2, v_rq3, v_rs1, v_rs2, v_rs3, v_rg1, v_rg2, v_rg3, v_rvr, v_rpd, v_abr])
+                st.cache_data.clear() # Limpiamos memoria tras escribir
                 
-                df_q = pd.DataFrame(tabla_quinielas.get_all_records())
-                headers_q = tabla_quinielas.row_values(1)
+                df_q = fetch_data_quinielas()
+                headers_q = df_q.columns.tolist()
                 headers_q = [str(h).strip() for h in headers_q]
                 
                 if 'Puntos_Totales' in headers_q:
@@ -536,7 +598,9 @@ else:
                                 
                             celdas.append(gspread.Cell(row=i+2, col=col_pts_idx, value=p))
                     
-                    if celdas: tabla_quinielas.update_cells(celdas)
-                    st.success("🏆 ¡Actualizado al milímetro con el formato Sprint!")
+                    if celdas: 
+                        tabla_quinielas.update_cells(celdas)
+                        st.cache_data.clear() # Limpiamos memoria tras escribir puntos
+                    st.success("🏆 ¡Puntos repartidos a todas las ligas al milímetro!")
                 else:
                     st.error("Error: No encontré la columna 'Puntos_Totales' en Quinielas.")
