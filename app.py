@@ -21,7 +21,7 @@ except FileNotFoundError:
 st.markdown(
     """
     <head>
-        <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/Sasian24/formula1/main/icono.jpg">
+        <link rel="apple-touch-icon" href="https://github.com/Sasian24/Formula1/blob/main/icono.png?raw=true">
     </head>
     """,
     unsafe_allow_html=True
