@@ -6,7 +6,7 @@ import requests
 import time  # <--- AGREGAR ESTA LÍNEA AQUÍ
 
 # --- 1. CONFIGURACIÓN VISUAL ---
-st.set_page_config(page_title="SasianGP 2026 - CAMPEONATOS PRIVADOS", page_icon="🏎️", layout="wide") 
+st.set_page_config(page_title="SasianGP 2026 - CAMPEONATOS PRIVADOS", page_icon="icono.jpg", layout="wide")
 
 # --- 2. CONEXIÓN A BASE DE DATOS (ANTICOLAPSO V2) ---
 @st.cache_resource
