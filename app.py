@@ -3,10 +3,12 @@ import gspread
 from datetime import datetime, timedelta, date
 import pandas as pd
 import requests
-import time  # <--- AGREGAR ESTA LÍNEA AQUÍ
+import time
+from PIL import Image
 
 # --- 1. CONFIGURACIÓN VISUAL ---
-st.set_page_config(page_title="SasianGP 2026 - CAMPEONATOS PRIVADOS", page_icon="icono.jpg", layout="wide")
+img_icono = Image.open("icono.jpg")
+st.set_page_config(page_title="SasianGP 2026 - CAMPEONATOS PRIVADOS", page_icon=img_icono, layout="wide")
 
 # --- 2. CONEXIÓN A BASE DE DATOS (ANTICOLAPSO V2) ---
 @st.cache_resource
