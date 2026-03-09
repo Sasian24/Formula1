@@ -6,9 +6,17 @@ import requests
 import time
 from PIL import Image
 
-# --- 1. CONFIGURACIÓN VISUAL ---
-img_icono = Image.open("icono.jpg")
-st.set_page_config(page_title="SasianGP 2026 - CAMPEONATOS PRIVADOS", page_icon=img_icono, layout="wide")
+# --- 1. CONFIGURACIÓN VISUAL BLINDADA ---
+import os
+from PIL import Image
+
+try:
+    # Intenta abrir el logo oficial
+    img_icono = Image.open("icono.jpg")
+    st.set_page_config(page_title="SasianGP 2026 - CAMPEONATOS PRIVADOS", page_icon=img_icono, layout="wide") 
+except FileNotFoundError:
+    # Si no lo encuentra en la nube, pone el carrito de emergencia para no chocar
+    st.set_page_config(page_title="SasianGP 2026 - CAMPEONATOS PRIVADOS", page_icon="🏎️", layout="wide")
 
 # --- 2. CONEXIÓN A BASE DE DATOS (ANTICOLAPSO V2) ---
 @st.cache_resource
