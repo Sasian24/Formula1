@@ -6,18 +6,26 @@ import requests
 import time
 from PIL import Image
 
-# --- 1. CONFIGURACIÓN VISUAL BLINDADA ---
+# --- 1. CONFIGURACIÓN VISUAL FORZADA ---
 import os
 from PIL import Image
 
 try:
-    # Intenta abrir el logo oficial
     img_icono = Image.open("icono.jpg")
     st.set_page_config(page_title="SasianGP 2026 - CAMPEONATOS PRIVADOS", page_icon=img_icono, layout="wide") 
 except FileNotFoundError:
-    # Si no lo encuentra en la nube, pone el carrito de emergencia para no chocar
     st.set_page_config(page_title="SasianGP 2026 - CAMPEONATOS PRIVADOS", page_icon="🏎️", layout="wide")
 
+# --- TRUCO SUCIO PARA EL IPHONE ---
+# Reemplaza "TU_USUARIO" con tu nombre de usuario real de GitHub
+st.markdown(
+    """
+    <head>
+        <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/Sasian24/formula1/main/icono.jpg">
+    </head>
+    """,
+    unsafe_allow_html=True
+)
 # --- 2. CONEXIÓN A BASE DE DATOS (ANTICOLAPSO V2) ---
 @st.cache_resource
 def init_gspread():
