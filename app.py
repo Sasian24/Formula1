@@ -7,19 +7,21 @@ import requests
 # --- 1. CONFIGURACIÓN VISUAL ---
 st.set_page_config(page_title="SasianGP 2026 - CAMPEONATOS PRIVADOS", page_icon="🏎️", layout="wide") 
 
-# --- 2. CONEXIÓN A BASE DE DATOS (ANTICOLAPSO) ---
+# --- 2. CONEXIÓN A BASE DE DATOS (ANTICOLAPSO V2) ---
 @st.cache_resource
 def init_gspread():
     gc = gspread.service_account(filename="Config/credenciales.json")
-    return gc.open("SasianGP_DB")
+    sh = gc.open("SasianGP_DB")
+    return (
+        sh.worksheet("Quinielas"),
+        sh.worksheet("Jugadores"),
+        sh.worksheet("Resultados"),
+        sh.worksheet("Calendario"),
+        sh.worksheet("Campeonatos_Admin"),
+        sh.worksheet("Solicitudes")
+    )
 
-sh = init_gspread()
-tabla_quinielas = sh.worksheet("Quinielas")
-tabla_jugadores = sh.worksheet("Jugadores")
-tabla_resultados = sh.worksheet("Resultados") 
-tabla_calendario = sh.worksheet("Calendario") 
-tabla_campeonatos_admin = sh.worksheet("Campeonatos_Admin")
-tabla_solicitudes = sh.worksheet("Solicitudes")
+tabla_quinielas, tabla_jugadores, tabla_resultados, tabla_calendario, tabla_campeonatos_admin, tabla_solicitudes = init_gspread()
 
 @st.cache_data(ttl=60)
 def fetch_data_jugadores(): return pd.DataFrame(tabla_jugadores.get_all_records())
@@ -104,7 +106,6 @@ if st.session_state['usuario_activo'] is None:
 
         wp = st.text_input("WhatsApp", key="r_w")
         mail = st.text_input("Correo", key="r_m")
-        # ARREGLO DE CALENDARIO HASTA 1930
         cumple = st.date_input("Cumpleaños (DD/MM/YYYY)", value=None, min_value=date(1930, 1, 1), max_value=date.today(), format="DD/MM/YYYY")
         pil_f = st.selectbox("Piloto Favorito", pilotos, index=None)
         esc = st.selectbox("Escudería *", list(url_logos.keys()))
@@ -142,11 +143,8 @@ if st.session_state['usuario_activo'] is None:
 else:
     df_admin = fetch_data_campeonatos_admin()
     mis_campeonatos_admin = df_admin[df_admin['Creador'] == st.session_state['usuario_activo']]['Nombre_Campeonato'].tolist() if not df_admin.empty else []
-
-    # BLINDAJE ADMIN FIA (Solo exactamente tú)
     es_admin_fia = str(st.session_state['usuario_activo']).strip().lower() == "sasian"
     
-    # LECTURA DINÁMICA DE MIS CAMPEONATOS PARA EL SWITCHER
     df_j_full = fetch_data_jugadores()
     match_usr = df_j_full[df_j_full['Nombre'] == st.session_state['usuario_activo']]
     mis_camps = []
@@ -160,19 +158,14 @@ else:
     with st.sidebar:
         st.markdown(f"### 🏎️ Pits: {st.session_state['usuario_activo']}")
         
-        # --- EL SWITCHER MULTICAMPEONATO ---
         camp_sel = st.selectbox("🏆 Viendo Campeonato:", mis_camps, index=mis_camps.index(st.session_state['campeonato_activo']))
         if camp_sel != st.session_state['campeonato_activo']:
             st.session_state['campeonato_activo'] = camp_sel
             st.rerun()
 
-        # --- BOTÓN DE UNIRSE A OTRO CAMPEONATO ---
         with st.expander("➕ Unirme a otro"):
-            # Leemos todos los campeonatos que existen
             df_todas = fetch_data_campeonatos_admin()
             todos_los_camps = sorted([str(l).strip() for l in df_todas['Nombre_Campeonato'].unique() if str(l).strip() != ""]) if not df_todas.empty else []
-            
-            # Filtramos para mostrar solo a los que NO perteneces actualmente
             camps_disponibles = [c for c in todos_los_camps if c not in mis_camps and c != "Sin Campeonato"]
             
             if camps_disponibles:
@@ -182,8 +175,7 @@ else:
                         tabla_solicitudes.append_row([st.session_state['usuario_activo'], sol_camp.strip(), "Pendiente"])
                         st.cache_data.clear()
                         st.success(f"✅ Solicitud enviada al Comisario de {sol_camp}.")
-                    else:
-                        st.warning("⚠️ Selecciona un campeonato primero.")
+                    else: st.warning("⚠️ Selecciona un campeonato primero.")
             else:
                 st.info("🏁 Ya eres miembro de todos los campeonatos disponibles.")
 
@@ -222,15 +214,13 @@ else:
         df_sol = fetch_data_solicitudes()
         if not df_sol.empty:
             pendientes = df_sol[(df_sol['Campeonato_Deseado'].isin(mis_campeonatos_admin)) & (df_sol['Estatus'] == 'Pendiente')]
-            if pendientes.empty:
-                st.success("✅ Pista limpia. No hay solicitudes pendientes por revisar.")
+            if pendientes.empty: st.success("✅ Pista limpia. No hay solicitudes pendientes por revisar.")
             else:
                 for idx_df, row in pendientes.iterrows():
                     fila_excel = idx_df + 2 
                     with st.container():
                         c1, c2, c3 = st.columns([3, 1, 1])
                         c1.info(f"🏎️ El piloto **{row['Jugador']}** solicita unirse a **{row['Campeonato_Deseado']}**.")
-                        
                         if c2.button("✅ Aprobar", key=f"ok_{idx_df}"):
                             tabla_solicitudes.update_cell(fila_excel, 3, "Aprobado")
                             df_j = fetch_data_jugadores()
@@ -243,7 +233,6 @@ else:
                                 tabla_jugadores.update_cell(f_jug, 10, camp_final) 
                             st.cache_data.clear()
                             st.rerun()
-                            
                         if c3.button("❌ Rechazar", key=f"no_{idx_df}"):
                             tabla_solicitudes.update_cell(fila_excel, 3, "Rechazado")
                             st.cache_data.clear()
@@ -258,6 +247,7 @@ else:
             hora_q_txt, hora_c_txt, hora_s_txt = "", "", ""
             f = df_cal_global[df_cal_global['Carrera'] == gp_sel]
             es_sprint = False
+            cerrado_fari = False
             
             if not f.empty:
                 if 'Es_Sprint' in f.columns: es_sprint_val = str(f.iloc[0]['Es_Sprint']).strip().upper()
@@ -272,28 +262,47 @@ else:
                 else: st.info(f"🕒 **Horarios Oficiales:** Qualy: {fecha_q_str} | Carrera: {fecha_c_str}")
 
                 ahora = datetime.utcnow() - timedelta(hours=6)
-                dt_q = pd.to_datetime(fecha_q_str, format="%H:%M %d-%m-%Y", errors='coerce')
-                dt_c = pd.to_datetime(fecha_c_str, format="%H:%M %d-%m-%Y", errors='coerce')
-                dt_s = pd.to_datetime(fecha_s_str, format="%H:%M %d-%m-%Y", errors='coerce')
                 
+                # REGLA FARÍ: Bloqueo el Jueves a las 23:59:59 de la semana de carrera
+                dt_q = pd.to_datetime(fecha_q_str, format="%H:%M %d-%m-%Y", errors='coerce')
                 if pd.notna(dt_q):
-                    hora_q_txt = dt_q.strftime("%H:%M")
-                    if ahora < (dt_q - timedelta(hours=1)): bq = False
-                if pd.notna(dt_c):
-                    hora_c_txt = dt_c.strftime("%H:%M")
-                    if ahora < (dt_c - timedelta(hours=1)): bc = False
-                if es_sprint:
-                    if pd.notna(dt_s):
-                        hora_s_txt = dt_s.strftime("%H:%M")
-                        if ahora < (dt_s - timedelta(hours=1)): bs = False
-                    else: bs = bq
+                    dias_para_jueves = dt_q.weekday() - 3 # Jueves es el día 3 de la semana
+                    jueves_limite = (dt_q - timedelta(days=dias_para_jueves)).replace(hour=23, minute=59, second=59)
+                    
+                    if ahora > jueves_limite:
+                        cerrado_fari = True
+                        bq = bc = bs = True
+                        st.error("🔒 PARQUE CERRADO (Regla Farí). Los pits se cerraron el Jueves a las 23:59 hrs CDMX para evitar ventajas por las prácticas. Ya no se aceptan apuestas.")
+
+                # Bloqueos de emergencia (por si la regla Farí falla o la carrera es antes)
+                if not cerrado_fari:
+                    dt_c = pd.to_datetime(fecha_c_str, format="%H:%M %d-%m-%Y", errors='coerce')
+                    dt_s = pd.to_datetime(fecha_s_str, format="%H:%M %d-%m-%Y", errors='coerce')
+                    
+                    if pd.notna(dt_q):
+                        hora_q_txt = dt_q.strftime("%H:%M")
+                        if ahora < (dt_q - timedelta(hours=1)): bq = False
+                    if pd.notna(dt_c):
+                        hora_c_txt = dt_c.strftime("%H:%M")
+                        if ahora < (dt_c - timedelta(hours=1)): bc = False
+                    if es_sprint:
+                        if pd.notna(dt_s):
+                            hora_s_txt = dt_s.strftime("%H:%M")
+                            if ahora < (dt_s - timedelta(hours=1)): bs = False
+                        else: bs = bq
                     
             df_q = fetch_data_quinielas()
             if not df_q.empty: df_q.columns = [str(c).strip() for c in df_q.columns]
             
-            filtro = df_q[(df_q['Jugador'] == st.session_state['usuario_activo']) & (df_q['Carrera'] == gp_sel)]
+            # Revisamos si ya apostó en ESTE campeonato específico
+            if not df_q.empty and 'Campeonato' in df_q.columns:
+                filtro = df_q[(df_q['Jugador'] == st.session_state['usuario_activo']) & (df_q['Carrera'] == gp_sel) & (df_q['Campeonato'].astype(str).str.strip() == st.session_state['campeonato_activo'])]
+            else:
+                filtro = df_q[(df_q['Jugador'] == st.session_state['usuario_activo']) & (df_q['Carrera'] == gp_sel)]
+                
             ya_aposto, ap_p = not filtro.empty, filtro.iloc[-1].to_dict() if not filtro.empty else {}
-            if ya_aposto: st.warning("🔒 Parque Cerrado activo. Ya sellaste tu pronóstico para esta carrera.")
+            
+            if ya_aposto: st.warning(f"🔒 Ya sellaste tu pronóstico para el campeonato **{st.session_state['campeonato_activo']}** en esta carrera.")
 
             def get_idx(campo): return pilotos.index(ap_p.get(campo)) if ya_aposto and ap_p.get(campo) in pilotos else None
 
@@ -342,7 +351,12 @@ else:
             with b2_col: pdia = st.selectbox("🌟 PD:", pilotos, index=get_idx('Piloto_Del_Dia'), key=f"p_{gp_sel}", placeholder="Elige...", disabled=bc or ya_aposto)
             with b3_col: ab = st.selectbox("💥 Abandono (Opcional):", pilotos, index=get_idx('Primer_Abandono'), key=f"a_{gp_sel}", placeholder="Ninguno", disabled=bc or ya_aposto)
 
-            btn_disabled = ya_aposto or hay_error_q or hay_error_s or hay_error_c
+            st.write("---")
+            
+            # EL BOTÓN HÍBRIDO (Apuesta Universal o Independiente)
+            aplicar_todos = st.checkbox("🏆 Aplicar esta misma quiniela a TODOS mis campeonatos", value=True, help="Si dejas esto marcado, te ahorras capturar en cada campeonato. Si lo quitas, la apuesta solo vale para el campeonato que estás viendo ahora mismo.", disabled=ya_aposto)
+
+            btn_disabled = ya_aposto or hay_error_q or hay_error_s or hay_error_c or cerrado_fari
             
             if st.button("🏎️ Sellar Apuesta", disabled=btn_disabled):
                 campos_obligatorios = [q1, q2, q3, g1, g2, g3, vr, pdia]
@@ -352,11 +366,27 @@ else:
                     st.warning("⚠️ ¡Pits incompletos! Faltan pronósticos por llenar.")
                 else:
                     v_s1, v_s2, v_s3 = s1 if s1 else "", s2 if s2 else "", s3 if s3 else ""
-                    fila_guardar = [(datetime.utcnow()-timedelta(hours=6)).strftime("%Y-%m-%d %H:%M:%S"), st.session_state['usuario_activo'], gp_sel, q1, q2, q3, v_s1, v_s2, v_s3, g1, g2, g3, vr, pdia, ab if ab else "", 0]
-                    tabla_quinielas.append_row(fila_guardar)
+                    
+                    camps_a_guardar = [st.session_state['campeonato_activo']]
+                    if aplicar_todos:
+                        camps_a_guardar = [c for c in mis_camps if c != "Sin Campeonato"]
+                        
+                    apuestas_exitosas = 0
+                    for c in camps_a_guardar:
+                        # Verificamos que no haya apostado ya en ese campeonato (por si acaso)
+                        ya_existe = not df_q[(df_q['Jugador'] == st.session_state['usuario_activo']) & (df_q['Carrera'] == gp_sel) & (df_q['Campeonato'].astype(str).str.strip() == c)].empty if 'Campeonato' in df_q.columns else False
+                        
+                        if not ya_existe:
+                            fila_guardar = [(datetime.utcnow()-timedelta(hours=6)).strftime("%Y-%m-%d %H:%M:%S"), st.session_state['usuario_activo'], gp_sel, q1, q2, q3, v_s1, v_s2, v_s3, g1, g2, g3, vr, pdia, ab if ab else "", 0, c]
+                            tabla_quinielas.append_row(fila_guardar)
+                            apuestas_exitosas += 1
+                            
                     st.cache_data.clear()
-                    st.success("✅ ¡Apuesta sellada con éxito!")
-                    st.rerun()
+                    if apuestas_exitosas > 0:
+                        st.success(f"✅ ¡Apuesta sellada con éxito en {apuestas_exitosas} campeonato(s)!")
+                        st.rerun()
+                    else:
+                        st.warning("No se guardó la apuesta porque ya habías apostado en los campeonatos seleccionados.")
 
     # --- MENÚ: EL PADDOCK ---
     elif menu == "🏆 El Paddock":
@@ -364,13 +394,11 @@ else:
         df_q = fetch_data_quinielas()
         df_j = fetch_data_jugadores()
         
-        if not df_j.empty and 'Campeonato' in df_j.columns:
-            jugadores_de_mi_camp = df_j[df_j['Campeonato'].astype(str).str.contains(st.session_state['campeonato_activo'], case=False, na=False)]['Nombre'].tolist()
-        else: jugadores_de_mi_camp = []
-
-        if not df_q.empty and jugadores_de_mi_camp:
+        if not df_q.empty and 'Campeonato' in df_q.columns:
+            # Filtramos las quinielas exclusivamente por el Campeonato Activo
             df_q.columns = [str(c).strip() for c in df_q.columns]
-            df_q = df_q[df_q['Jugador'].isin(jugadores_de_mi_camp)]
+            df_q = df_q[df_q['Campeonato'].astype(str).str.strip() == st.session_state['campeonato_activo']]
+            
             df_q['Puntos_Totales'] = pd.to_numeric(df_q.get('Puntos_Totales', 0), errors='coerce').fillna(0)
             res = df_q.groupby('Jugador')['Puntos_Totales'].sum().reset_index()
             if not df_j.empty:
@@ -400,22 +428,17 @@ else:
                 html_table += '</tr>'
             html_table += '</tbody></table>'
             st.markdown(html_table, unsafe_allow_html=True)
-        else: st.info("Aún no hay apuestas de pilotos en este campeonato.")
+        else: st.info("Aún no hay apuestas selladas en este campeonato.")
 
     # --- MENÚ: PADDOCK DETALLADO ---
     elif menu == "📊 Paddock Detallado":
         st.subheader(f"🔍 Análisis de Telemetría - Campeonato: {st.session_state['campeonato_activo']}")
         df_q = fetch_data_quinielas()
-        df_j_full = fetch_data_jugadores()
+        df_j = fetch_data_jugadores()
         
-        df_j = df_j_full.copy()
-        if not df_j.empty and 'Campeonato' in df_j.columns:
-            jugadores_de_mi_camp = df_j[df_j['Campeonato'].astype(str).str.contains(st.session_state['campeonato_activo'], case=False, na=False)]['Nombre'].tolist()
-        else: jugadores_de_mi_camp = []
-
-        if not df_q.empty and jugadores_de_mi_camp:
+        if not df_q.empty and 'Campeonato' in df_q.columns:
             df_q.columns = [str(c).strip() for c in df_q.columns]
-            df_q = df_q[df_q['Jugador'].isin(jugadores_de_mi_camp)]
+            df_q = df_q[df_q['Campeonato'].astype(str).str.strip() == st.session_state['campeonato_activo']]
 
             op_v = st.selectbox("Ver:", ["🏆 Total"] + lista_carreras_oficial)
             if op_v == "🏆 Total":
@@ -526,14 +549,15 @@ else:
                         html_det += '</tr>'
                     html_det += '</table>'
                     st.markdown(html_det, unsafe_allow_html=True)
+        else: st.info("Aún no hay apuestas selladas en este campeonato para ver la telemetría.")
 
     # --- REGLAMENTO Y ADMIN FIA ---
     elif menu == "📖 Reglamento Oficial":
         st.header("📜 REGLAMENTO DEPORTIVO SASIANGP 2026")
         st.write("Bienvenidos a la máxima categoría. Lean las reglas a detalle para que luego no anden llorando por los rincones exigiendo puntos que no se ganaron.")
         st.markdown("---")
-        st.markdown("### ⏱️ ARTÍCULO 1: El Reloj No Perdona (Cierre de Pits)")
-        st.info("El sistema cuenta con un **Reloj Suizo** automático en formato de 24 hrs. \n* **Calificación (Qualy):** Se bloquea **EXACTAMENTE 1 HORA ANTES** de que los autos salgan a la pista.\n* **Carrera:** Se bloquea **EXACTAMENTE 1 HORA ANTES** del semáforo en verde.\n* **Excepciones:** NINGUNA. Si entras a la app 59 minutos antes, las cajitas estarán en gris y te vas con 0 puntos.")
+        st.markdown("### ⏱️ ARTÍCULO 1: El Reloj No Perdona (La Regla Farí)")
+        st.info("Para evitar espionaje durante las prácticas libres, **el Parque Cerrado se activa todos los JUEVES a las 23:59 hrs (Hora CDMX)** de la semana de carrera. Después de esa hora, nadie puede sellar ni modificar su quiniela. Sin excepciones.")
         st.markdown("### 🎯 ARTÍCULO 2: Sistema de Puntuación Detallado")
         st.success("""
         Para las secciones de **Calificación (Q1, Q2, Q3)**, **Carrera (P1, P2, P3)** y **Carreras Sprint (S1, S2, S3)** el puntaje se calcula así:
