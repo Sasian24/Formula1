@@ -5,6 +5,9 @@ import pandas as pd
 import requests
 import time
 from PIL import Image
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 # --- 1. CONFIGURACIÓN VISUAL FORZADA ---
 import os
@@ -135,13 +138,13 @@ if st.session_state['usuario_activo'] is None:
         n_camp_final = st.text_input("Nombre de tu Nuevo Campeonato *", key="r_camp_nuevo").strip() if n_camp_sel == "Otro (Crear Nuevo)" else n_camp_sel
 
         wp = st.text_input("WhatsApp", key="r_w")
-        mail = st.text_input("Correo", key="r_m")
+        mail = st.text_input("Correo *", key="r_m")
         cumple = st.date_input("Cumpleaños (DD/MM/YYYY)", value=None, min_value=date(1930, 1, 1), max_value=date.today(), format="DD/MM/YYYY")
         pil_f = st.selectbox("Piloto Favorito", pilotos, index=None)
         esc = st.selectbox("Escudería *", list(url_logos.keys()))
         
         if st.button("✍️ Firmar Contrato"):
-            if not nu or not np or not esc or not n_camp_final:
+            if not nu or not np or not esc or not n_camp_final or not mail:
                 st.error("⚠️ Llena todos los campos obligatorios (*).")
             else:
                 ahora_mx = (datetime.utcnow() - timedelta(hours=6)).strftime("%Y-%m-%d %H:%M:%S")
@@ -163,11 +166,42 @@ if st.session_state['usuario_activo'] is None:
                 
     with tab3:
         uo = st.text_input("Alias para recuperar:", key="f_u")
-        if st.button("🔍 Buscar"):
+        if st.button("✉️ Enviar Clave al Correo"):
             df_j = fetch_data_jugadores()
             match = df_j[df_j['Nombre'] == uo.strip()]
-            if not match.empty: st.success(f"🔑 Tu clave: {match.iloc[0]['Password']}")
-            else: st.error("No encontrado.")
+            
+            if not match.empty:
+                # OJO: Asegúrate de que el encabezado en tu Excel se llame exactamente 'Correo'
+                correo_destino = str(match.iloc[0].get('Correo', '')).strip()
+                password_usuario = match.iloc[0]['Password']
+                
+                if correo_destino and correo_destino != "nan" and correo_destino != "":
+                    # --- CONFIGURACIÓN DEL REMITENTE ---
+                    correo_escuderia = "TU_CORREO@gmail.com" # Pon aquí tu correo de Gmail
+                    password_app = "pkfosnupqdlmfrox" # No es tu contraseña normal (lee abajo)
+                    
+                    msg = MIMEMultipart()
+                    msg['From'] = correo_escuderia
+                    msg['To'] = correo_destino
+                    msg['Subject'] = "🏎️ Recuperación de Clave - SasianGP 2026"
+                    
+                    cuerpo = f"Hola Piloto {uo.strip()},\n\nAlguien solicitó la clave de acceso para tu monoplaza.\nTu contraseña secreta es: {password_usuario}\n\n¡Nos vemos en la pista de SasianGP!"
+                    msg.attach(MIMEText(cuerpo, 'plain'))
+                    
+                    try:
+                        server = smtplib.SMTP('smtp.gmail.com', 587)
+                        server.starttls()
+                        server.login(correo_escuderia, password_app)
+                        texto = msg.as_string()
+                        server.sendmail(correo_escuderia, correo_destino, texto)
+                        server.quit()
+                        st.success("✅ ¡Bandera Verde! La clave fue enviada al correo registrado de este piloto.")
+                    except Exception as e:
+                        st.error(f"❌ Falla de motor. No se pudo enviar el correo. Revisa la consola.")
+                else:
+                    st.error("⚠️ Este piloto es de la vieja escuela y no tiene un correo registrado en la base de datos. Tendrá que hablar con el Comisario (tú).")
+            else: 
+                st.error("❌ Piloto no encontrado en el Paddock.")
 
 # --- 6. APLICACIÓN PRINCIPAL ---
 else:
