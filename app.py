@@ -197,7 +197,8 @@ if st.session_state['usuario_activo'] is None:
                         server.quit()
                         st.success("✅ ¡Bandera Verde! La clave fue enviada al correo registrado de este piloto.")
                     except Exception as e:
-                        st.error(f"❌ Falla de motor. No se pudo enviar el correo. Revisa la consola.")
+                        except Exception as e:
+                        st.error(f"❌ Falla de motor. Detalle técnico: {e}")
                 else:
                     st.error("⚠️ Este piloto es de la vieja escuela y no tiene un correo registrado en la base de datos. Tendrá que hablar con el Comisario (tú).")
             else: 
@@ -449,18 +450,23 @@ else:
                         else:
                             filtro_c = pd.DataFrame()
                         
-                        # ⚠️ LA MAGIA ESTÁ AQUÍ: Convertimos el número pesado de Pandas a un "int" normal
-                        try: pts_previos = int(float(filtro_c.iloc[-1].get('Puntos_Totales', 0))) if not filtro_c.empty else 0
-                        except: pts_previos = 0
+                        # Blindaje extremo contra int64
+                        try:
+                            val_pts = filtro_c.iloc[-1].get('Puntos_Totales', 0) if not filtro_c.empty else 0
+                            pts_previos = int(val_pts.item()) if hasattr(val_pts, 'item') else int(val_pts)
+                        except:
+                            pts_previos = 0
                         
-                        fila_guardar = [(datetime.utcnow()-timedelta(hours=6)).strftime("%Y-%m-%d %H:%M:%S"), st.session_state['usuario_activo'], gp_sel, q1, q2, q3, v_s1, v_s2, v_s3, g1, g2, g3, vr, pdia, ab if ab else "", pts_previos, c]
+                        # Todo se convierte a string (texto) menos los puntos
+                        fila_guardar = [(datetime.utcnow()-timedelta(hours=6)).strftime("%Y-%m-%d %H:%M:%S"), str(st.session_state['usuario_activo']), str(gp_sel), str(q1), str(q2), str(q3), str(v_s1), str(v_s2), str(v_s3), str(g1), str(g2), str(g3), str(vr), str(pdia), str(ab if ab else ""), pts_previos, str(c)]
                         
                         if not filtro_c.empty:
-                            row_excel = int(filtro_c.index[0]) + 2 # Garantizamos que la fila también sea int nativo
+                            idx_pd = filtro_c.index[0]
+                            row_excel = int(idx_pd.item()) + 2 if hasattr(idx_pd, 'item') else int(idx_pd) + 2
+                            
                             for col_idx, val in enumerate(fila_guardar):
-                                # Limpiamos todos los datos extraños para que Google Sheets no llore
-                                val_seguro = int(val) if isinstance(val, (int, float)) else str(val)
-                                celdas_a_actualizar.append(gspread.Cell(row=row_excel, col=col_idx+1, value=val_seguro))
+                                val_limpio = val.item() if hasattr(val, 'item') else val
+                                celdas_a_actualizar.append(gspread.Cell(row=row_excel, col=int(col_idx)+1, value=val_limpio))
                         else:
                             filas_a_agregar.append(fila_guardar)
                             
