@@ -171,14 +171,14 @@ if st.session_state['usuario_activo'] is None:
             match = df_j[df_j['Nombre'] == uo.strip()]
             
             if not match.empty:
-                # OJO: Asegúrate de que el encabezado en tu Excel se llame exactamente 'Correo'
                 correo_destino = str(match.iloc[0].get('Correo', '')).strip()
-                password_usuario = match.iloc[0]['Password']
+                password_usuario = str(match.iloc[0]['Password'])
                 
                 if correo_destino and correo_destino != "nan" and correo_destino != "":
                     # --- CONFIGURACIÓN DEL REMITENTE ---
-                    correo_escuderia = "TU_CORREO@gmail.com" # Pon aquí tu correo de Gmail
-                    password_app = "pkfosnupqdlmfrox" # No es tu contraseña normal (lee abajo)
+                    # ⚠️ DEBE SER TU CORREO @gmail.com, SI PONES @me.com GOOGLE LO BLOQUEARÁ
+                    correo_escuderia = "rsasian.qwerty@gmail.com" 
+                    password_app = "pkfosnupqdlmfrox"
                     
                     msg = MIMEMultipart()
                     msg['From'] = correo_escuderia
@@ -197,10 +197,9 @@ if st.session_state['usuario_activo'] is None:
                         server.quit()
                         st.success("✅ ¡Bandera Verde! La clave fue enviada al correo registrado de este piloto.")
                     except Exception as e:
-                        except Exception as e:
                         st.error(f"❌ Falla de motor. Detalle técnico: {e}")
                 else:
-                    st.error("⚠️ Este piloto es de la vieja escuela y no tiene un correo registrado en la base de datos. Tendrá que hablar con el Comisario (tú).")
+                    st.error("⚠️ Este piloto no tiene un correo registrado en la base de datos.")
             else: 
                 st.error("❌ Piloto no encontrado en el Paddock.")
 
