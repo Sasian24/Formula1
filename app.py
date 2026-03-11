@@ -8,6 +8,7 @@ from PIL import Image
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from streamlit_cookies_controller import CookieController
 
 # --- 1. CONFIGURACIÓN VISUAL FORZADA ---
 import os
@@ -19,8 +20,10 @@ try:
 except FileNotFoundError:
     st.set_page_config(page_title="SasianGP 2026 - CAMPEONATOS PRIVADOS", page_icon="🏎️", layout="wide")
 
+# --- AQUÍ PRENDEMOS EL HORNO DE GALLETAS ---
+controller = CookieController()
+
 # --- TRUCO SUCIO PARA EL IPHONE ---
-# Reemplaza "TU_USUARIO" con tu nombre de usuario real de GitHub
 st.markdown(
     """
     <head>
@@ -103,6 +106,12 @@ traductor_api = {
 }
 
 # --- 4. GESTIÓN DE SESIÓN ---
+# --- LECTOR DE GALLETAS (AUTO-LOGIN) ---
+galleta_usuario = controller.get('SasianGP_Piloto')
+
+if galleta_usuario and 'usuario_activo' not in st.session_state:
+    st.session_state['usuario_activo'] = galleta_usuario
+# ---------------------------------------
 if 'usuario_activo' not in st.session_state: st.session_state['usuario_activo'] = None
 if 'campeonato_activo' not in st.session_state: st.session_state['campeonato_activo'] = None
 if 'auto_c1' not in st.session_state: st.session_state['auto_c1'] = None
@@ -120,8 +129,11 @@ if st.session_state['usuario_activo'] is None:
             user_match = df_j[(df_j['Nombre']==u.strip()) & (df_j['Password']==p.strip())]
             if not user_match.empty:
                 st.session_state['usuario_activo'] = u.strip()
+                controller.set('SasianGP_Piloto', u.strip()) # <-- INYECCIÓN DE GALLETA
                 campeonatos_usuario = str(user_match.iloc[0].get('Campeonato', '')).strip().split(',')
                 st.session_state['campeonato_activo'] = campeonatos_usuario[0].strip() if campeonatos_usuario[0] else "Sin Campeonato"
+                st.success("✅ ¡Semáforo en verde! Entrando al Paddock...")
+                time.sleep(1)
                 st.rerun()
             else: st.error("❌ Acceso Denegado.")
             
@@ -176,7 +188,6 @@ if st.session_state['usuario_activo'] is None:
                 
                 if correo_destino and correo_destino != "nan" and correo_destino != "":
                     # --- CONFIGURACIÓN DEL REMITENTE ---
-                    # ⚠️ DEBE SER TU CORREO @gmail.com, SI PONES @me.com GOOGLE LO BLOQUEARÁ
                     correo_escuderia = "rsasian.qwerty@gmail.com" 
                     password_app = "pkfosnupqdlmfrox"
                     
@@ -252,6 +263,7 @@ else:
         
         st.markdown("---")
         if st.button("🚪 Salir de los Pits"):
+            controller.remove('SasianGP_Piloto') # <-- ELIMINA LA GALLETA AL SALIR
             st.session_state['usuario_activo'] = None
             st.session_state['campeonato_activo'] = None
             st.rerun()
@@ -374,7 +386,6 @@ else:
 
             def get_idx(campo): return pilotos.index(ap_p.get(campo)) if ya_aposto and ap_p.get(campo) in pilotos else None
 
-            # --- SE QUITÓ EL BLOQUEO POR HABER APOSTADO ---
             q_title = f" ({hora_q_txt} hrs CDMX)" if hora_q_txt else ""
             st.markdown(f"### ⏱️ Calificación{q_title}")
             q1_col, q2_col, q3_col = st.columns(3)
