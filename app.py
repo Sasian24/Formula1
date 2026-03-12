@@ -575,7 +575,7 @@ else:
             html_table += '</tr></thead><tbody>'
             for _, row in res.iterrows():
                 logo_url = row.get('🛡️', '')
-                img_tag = f'<img src="{logo_url}" width="30">' if logo_url else ''
+                img_tag = f'<img src="{logo_url}" width="70">' if logo_url else ''
                 html_table += '<tr style="border-bottom: 1px solid #444; background-color: transparent;">'
                 html_table += f'<td style="text-align:center; padding: 10px; vertical-align: middle;">{img_tag}</td>'
                 html_table += f'<td style="text-align:center; padding: 10px; vertical-align: middle;">{row["Piloto"]}</td>'
