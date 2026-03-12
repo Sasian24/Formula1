@@ -303,21 +303,19 @@ else:
                     else:
                         st.warning("⚠️ Necesitas escribir un nombre para el campeonato.")
     with st.sidebar:
-            st.markdown(f"### 🏎️ Pits: {st.session_state['usuario_activo']}")
-            
-            camp_sel = st.selectbox("🏆 Viendo Campeonato:", mis_camps, index=mis_camps.index(st.session_state['campeonato_activo']))
-            if camp_sel != st.session_state['campeonato_activo']:
-                st.session_state['campeonato_activo'] = camp_sel
-                st.rerun()
+        st.markdown(f"### 🏎️ Pits: {st.session_state['usuario_activo']}")
+        
+        # ... (código de selección de campeonato) ...
 
-            with st.expander("➕ Unirme o Crear Campeonato"):
-                # ... (Aquí está todo tu código actual de los campeonatos, déjalo intacto) ...
-                # ... (hasta donde termina el warning de "Necesitas escribir un nombre...") ...
+        with st.expander("➕ Unirme o Crear Campeonato"):
+            df_todas = fetch_data_campeonatos_admin() # <-- ESTO DEBE TENER 4 ESPACIOS MÁS QUE EL 'with' DE ARRIBA
+            # ... (todo el código de unirse a campeonato va aquí adentro, bien espaciado) ...
 
-            # 🔧 AQUÍ PEGAMOS EL NUEVO CAJÓN DE PERFIL:
-            with st.expander("👤 Editar Mi Perfil"):
-                df_j = fetch_data_jugadores()
-                match_usr = df_j[df_j['Nombre'] == st.session_state['usuario_activo']]
+        # 🔧 FÍJATE AQUÍ: Este nuevo 'with' tiene que estar alineado EXACTAMENTE a la misma altura que el 'with' de "Unirme o Crear"
+        with st.expander("👤 Editar Mi Perfil"):
+            df_j = fetch_data_jugadores() # <-- Y lo de adentro lleva 4 espacios extra
+            match_usr = df_j[df_j['Nombre'] == st.session_state['usuario_activo']]
+            # ... (el resto del código que te pasé) ...
 
                 if not match_usr.empty:
                     idx_jug = match_usr.index[0]
