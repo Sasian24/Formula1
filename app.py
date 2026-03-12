@@ -81,7 +81,7 @@ url_logos = {
     "Racing Bulls": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/rb.png",
     "Audi": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/sauber.png",
     "Haas": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/haas.png",
-    "Cadillac": "https://www.google.com/s2/favicons?sz=128&domain=cadillac.com"
+    "Cadillac": "https://github.com/Sasian24/Formula1/blob/main/cadillac.png?raw=true"
 }
 
 pilotos = sorted([
