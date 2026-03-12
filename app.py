@@ -788,9 +788,16 @@ else:
         st.markdown("**1. ¿Hasta qué día y hora puedo meter o cambiar mi pronóstico?**")
         st.info("Por la sagrada **'Regla Farí'**, los Pits se cierran automáticamente todos los **JUEVES a las 23:59 hrs (Hora de la CDMX)** de la semana de carrera. Después de esa hora, entra el Parque Cerrado y el sistema bloquea cualquier intento de apuesta o modificación.")
         
-        st.markdown("**2. ¿Me salí a contestar un WhatsApp y al regresar a la app me sacó. ¿Perdí todo?**")
-        st.success("¡Tranquilo! La app tiene un 'Llavero Virtual'. Si te sales de la pantalla por unos minutos para revisar otra cosa, al regresar tu sesión seguirá abierta exactamente donde la dejaste.")
+        st.markdown("**2. Me salí a contestar un mensaje y al regresar a la app me sacó. ¿Por qué se cierra mi sesión?**")
+        st.info("""
+        La app usa un 'Llavero Virtual' (Cookies) para recordar que estás adentro. Sin embargo, los navegadores de los celulares bloquean estas llaves por defecto al considerarlas externas. Para que tu sesión sea infinita, configura tu teléfono así:
         
+        * 🍎 **Si usas iPhone (Safari):** Ve a los **Ajustes** de tu iPhone > **Aplicaciones** > **Safari**. Baja hasta la sección de Privacidad y Seguridad y **APAGA** el interruptor que dice **'Prevenir rastreo entre sitios'**.
+        
+        * 🤖 **Si usas Android (Chrome):** Abre tu navegador Chrome, toca los 3 puntos (arriba a la derecha) > **Configuración** > **Configuración de sitios** > **Cookies de terceros** y selecciona **'Permitir cookies de terceros'**.
+        
+        *(Nota de Dirección de Carrera: Después de hacer este ajuste, inicia sesión una vez más en la app para que el sistema te entregue tu llave definitiva).*
+        """)
         st.markdown("**3. Olvidé mi contraseña secreta, ¿qué hago?**")
         st.success("Cierra sesión (o abre la app en modo incógnito). En la pantalla de acceso busca la pestaña **'🆘 Olvidé mi Clave'**. Pon el alias con el que corres, dale al botón, y Dirección de Carrera te mandará tu contraseña al correo electrónico con el que te registraste.")
         
