@@ -577,13 +577,19 @@ else:
             
             df_q['Puntos_Totales'] = pd.to_numeric(df_q.get('Puntos_Totales', 0), errors='coerce').fillna(0)
             res = df_q.groupby('Jugador')['Puntos_Totales'].sum().reset_index()
+            
             if not df_j.empty:
-                res = res.merge(df_j[['Nombre', 'Escuderia_Favorita']], left_on='Piloto', right_on='Nombre', how='left')
-                # ESTA LÍNEA ES LA MAGIA: convierte a minúsculas y quita espacios
+                # 🔧 AQUÍ ESTÁ LA CORRECCIÓN CLAVE: left_on='Jugador'
+                res = res.merge(df_j[['Nombre', 'Escuderia_Favorita']], left_on='Jugador', right_on='Nombre', how='left')
+                
+                # LA MAGIA DE LOS LOGOS:
                 res['🛡️'] = res['Escuderia_Favorita'].str.lower().str.strip().map(url_logos).fillna(url_logos["cadillac"])
+                
+                # AHORA SÍ renombramos 'Jugador' a 'Piloto' para que se vea bonito en la tabla
                 res = res.rename(columns={'Jugador': 'Piloto', 'Escuderia_Favorita': 'Escudería', 'Puntos_Totales': 'Puntos'})
                 res = res[['🛡️', 'Piloto', 'Escudería', 'Puntos']]
-            else: res = res.rename(columns={'Jugador': 'Piloto', 'Puntos_Totales': 'Puntos'})
+            else: 
+                res = res.rename(columns={'Jugador': 'Piloto', 'Puntos_Totales': 'Puntos'})
                 
             res = res.sort_values('Puntos', ascending=False).reset_index(drop=True)
             
