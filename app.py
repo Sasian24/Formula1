@@ -240,21 +240,48 @@ else:
             st.session_state['campeonato_activo'] = camp_sel
             st.rerun()
 
-        with st.expander("➕ Unirme a otro"):
+        with st.expander("➕ Unirme o Crear Campeonato"):
             df_todas = fetch_data_campeonatos_admin()
             todos_los_camps = sorted([str(l).strip() for l in df_todas['Nombre_Campeonato'].unique() if str(l).strip() != ""]) if not df_todas.empty else []
             camps_disponibles = [c for c in todos_los_camps if c not in mis_camps and c != "Sin Campeonato"]
             
-            if camps_disponibles:
-                sol_camp = st.selectbox("Selecciona el campeonato:", camps_disponibles, index=None, placeholder="Elige uno...")
-                if st.button("Enviar Solicitud"):
-                    if sol_camp:
-                        tabla_solicitudes.append_row([st.session_state['usuario_activo'], sol_camp.strip(), "Pendiente"])
+            op_camp = st.radio("¿Qué deseas hacer?", ["🤝 Unirme a uno existente", "🌟 Crear uno nuevo"])
+            
+            if op_camp == "🤝 Unirme a uno existente":
+                if camps_disponibles:
+                    sol_camp = st.selectbox("Selecciona el campeonato:", camps_disponibles, index=None, placeholder="Elige uno...")
+                    if st.button("Enviar Solicitud"):
+                        if sol_camp:
+                            tabla_solicitudes.append_row([st.session_state['usuario_activo'], sol_camp.strip(), "Pendiente"])
+                            st.cache_data.clear()
+                            st.success(f"✅ Solicitud enviada al Comisario de {sol_camp}.")
+                        else: st.warning("⚠️ Selecciona un campeonato primero.")
+                else:
+                    st.info("🏁 Ya eres miembro de todos los campeonatos disponibles.")
+            
+            elif op_camp == "🌟 Crear uno nuevo":
+                n_camp_nuevo = st.text_input("Nombre de tu nuevo campeonato:")
+                if st.button("Crear y Entrar"):
+                    if n_camp_nuevo:
+                        # 1. Lo agregamos a la lista de administradores
+                        tabla_campeonatos_admin.append_row([n_camp_nuevo.strip(), st.session_state['usuario_activo']])
+                        
+                        # 2. Se lo asignamos al jugador activo en su perfil
+                        df_j = fetch_data_jugadores()
+                        idx_jug = df_j.index[df_j['Nombre'] == st.session_state['usuario_activo']].tolist()
+                        if idx_jug:
+                            f_jug = idx_jug[0] + 2
+                            camp_actual = str(df_j.at[idx_jug[0], 'Campeonato']).strip()
+                            camp_final = f"{camp_actual}, {n_camp_nuevo.strip()}" if camp_actual and camp_actual != "Sin Campeonato" else n_camp_nuevo.strip()
+                            tabla_jugadores.update_cell(f_jug, 10, camp_final)
+                        
                         st.cache_data.clear()
-                        st.success(f"✅ Solicitud enviada al Comisario de {sol_camp}.")
-                    else: st.warning("⚠️ Selecciona un campeonato primero.")
-            else:
-                st.info("🏁 Ya eres miembro de todos los campeonatos disponibles.")
+                        st.session_state['campeonato_activo'] = n_camp_nuevo.strip()
+                        st.success(f"✅ ¡Campeonato '{n_camp_nuevo}' creado! Eres el Comisario oficial.")
+                        time.sleep(1.5)
+                        st.rerun()
+                    else:
+                        st.warning("⚠️ Necesitas escribir un nombre para el campeonato.")
 
         st.markdown("---")
         opciones_nav = ["📝 Hacer Apuesta", "🏆 El Paddock", "📊 Paddock Detallado", "📖 Reglamento Oficial", "📘 Manual del Piloto"]
