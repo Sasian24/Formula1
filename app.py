@@ -71,17 +71,17 @@ def fetch_data_mensajes(): return pd.DataFrame(tabla_mensajes.get_all_records())
 
 # --- 3. LOGOS Y PILOTOS ---
 url_logos = {
-    "Red Bull Racing": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/red-bull.png",
-    "Ferrari": "https://raw.githubusercontent.com/Sasian24/Formula1/main/ferrari.png",
-    "Mercedes": "https://raw.githubusercontent.com/Sasian24/Formula1/main/mercedes.png",
-    "McLaren": "https://raw.githubusercontent.com/Sasian24/Formula1/main/mclaren.png",
-    "Aston Martin": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/aston-martin.png",
-    "Alpine": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/alpine.png",
-    "Williams": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/williams.png",
-    "Racing Bulls": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/rb.png",
-    "Audi": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/sauber.png",
-    "Haas": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/haas.png",
-    "Cadillac": "https://raw.githubusercontent.com/Sasian24/Formula1/main/cadillac.png"
+    "red bull racing": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/red-bull.png",
+    "ferrari": "https://raw.githubusercontent.com/Sasian24/Formula1/main/ferrari.png",
+    "mercedes": "https://raw.githubusercontent.com/Sasian24/Formula1/main/mercedes.png",
+    "mclaren": "https://raw.githubusercontent.com/Sasian24/Formula1/main/mclaren.png",
+    "aston martin": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/aston-martin.png",
+    "alpine": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/alpine.png",
+    "williams": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/williams.png",
+    "racing bulls": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/rb.png",
+    "audi": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/sauber.png",
+    "haas": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/haas.png",
+    "cadillac": "https://raw.githubusercontent.com/Sasian24/Formula1/main/cadillac.png"
 }
 
 pilotos = sorted([
@@ -558,8 +558,9 @@ else:
             df_q['Puntos_Totales'] = pd.to_numeric(df_q.get('Puntos_Totales', 0), errors='coerce').fillna(0)
             res = df_q.groupby('Jugador')['Puntos_Totales'].sum().reset_index()
             if not df_j.empty:
-                res = res.merge(df_j[['Nombre', 'Escuderia_Favorita']], left_on='Jugador', right_on='Nombre', how='left')
-                res['🛡️'] = res['Escuderia_Favorita'].map(url_logos).fillna(url_logos["Cadillac"])
+                res = res.merge(df_j[['Nombre', 'Escuderia_Favorita']], left_on='Piloto', right_on='Nombre', how='left')
+                # ESTA LÍNEA ES LA MAGIA: convierte a minúsculas y quita espacios
+                res['🛡️'] = res['Escuderia_Favorita'].str.lower().str.strip().map(url_logos).fillna(url_logos["cadillac"])
                 res = res.rename(columns={'Jugador': 'Piloto', 'Escuderia_Favorita': 'Escudería', 'Puntos_Totales': 'Puntos'})
                 res = res[['🛡️', 'Piloto', 'Escudería', 'Puntos']]
             else: res = res.rename(columns={'Jugador': 'Piloto', 'Puntos_Totales': 'Puntos'})
