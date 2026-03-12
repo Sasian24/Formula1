@@ -54,8 +54,21 @@ def fetch_data_jugadores(): return pd.DataFrame(tabla_jugadores.get_all_records(
 @st.cache_data(ttl=60)
 def fetch_data_quinielas(): return pd.DataFrame(tabla_quinielas.get_all_records())
 
-@st.cache_data(ttl=120)
-def fetch_data_calendario(): return pd.DataFrame(tabla_calendario.get_all_records())
+@st.cache_data(ttl=600)
+def fetch_data_calendario():
+    try:
+        # Intenta abrir la pestaña Calendario
+        sheet = client.open_by_key(st.secrets["spreadsheet_id"]).worksheet("Calendario")
+        data = sheet.get_all_values()
+        if len(data) > 1:
+            return pd.DataFrame(data[1:], columns=data[0])
+        return pd.DataFrame()
+    except Exception as e:
+        st.error(f"⚠️ Error al conectar con la pestaña 'Calendario': {e}")
+        return pd.DataFrame()
+
+# Cargar el calendario global de inmediato
+df_cal_global = fetch_data_calendario()
 
 @st.cache_data(ttl=60)
 def fetch_vals_resultados(): return tabla_resultados.get_all_values()
