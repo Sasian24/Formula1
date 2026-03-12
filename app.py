@@ -9,11 +9,9 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from streamlit_cookies_controller import CookieController
+import os
 
 # --- 1. CONFIGURACIÓN VISUAL FORZADA ---
-import os
-from PIL import Image
-
 try:
     img_icono = Image.open("icono.jpg")
     st.set_page_config(page_title="SasianGP 2026 - CAMPEONATOS PRIVADOS", page_icon=img_icono, layout="wide") 
@@ -31,10 +29,8 @@ st.markdown(
     </head>
     """,
     unsafe_allow_html=True
-    
-
-    
 )
+
 # --- 2. CONEXIÓN A BASE DE DATOS (ANTICOLAPSO V2) ---
 @st.cache_resource
 def init_gspread():
@@ -46,10 +42,11 @@ def init_gspread():
         sh.worksheet("Resultados"),
         sh.worksheet("Calendario"),
         sh.worksheet("Campeonatos_Admin"),
-        sh.worksheet("Solicitudes")
+        sh.worksheet("Solicitudes"),
+        sh.worksheet("Mensajes") # <-- NUEVA PESTAÑA CONECTADA
     )
 
-tabla_quinielas, tabla_jugadores, tabla_resultados, tabla_calendario, tabla_campeonatos_admin, tabla_solicitudes = init_gspread()
+tabla_quinielas, tabla_jugadores, tabla_resultados, tabla_calendario, tabla_campeonatos_admin, tabla_solicitudes, tabla_mensajes = init_gspread()
 
 @st.cache_data(ttl=60)
 def fetch_data_jugadores(): return pd.DataFrame(tabla_jugadores.get_all_records())
@@ -68,6 +65,9 @@ def fetch_data_campeonatos_admin(): return pd.DataFrame(tabla_campeonatos_admin.
 
 @st.cache_data(ttl=30)
 def fetch_data_solicitudes(): return pd.DataFrame(tabla_solicitudes.get_all_records())
+
+@st.cache_data(ttl=30)
+def fetch_data_mensajes(): return pd.DataFrame(tabla_mensajes.get_all_records()) # <-- LECTOR DE MENSAJES
 
 # --- 3. LOGOS Y PILOTOS ---
 url_logos = {
@@ -109,12 +109,11 @@ traductor_api = {
 }
 
 # --- 4. GESTIÓN DE SESIÓN ---
-# --- LECTOR DE GALLETAS (AUTO-LOGIN) ---
 galleta_usuario = controller.get('SasianGP_Piloto')
 
 if galleta_usuario and 'usuario_activo' not in st.session_state:
     st.session_state['usuario_activo'] = galleta_usuario
-# ---------------------------------------
+
 if 'usuario_activo' not in st.session_state: st.session_state['usuario_activo'] = None
 if 'campeonato_activo' not in st.session_state: st.session_state['campeonato_activo'] = None
 if 'auto_c1' not in st.session_state: st.session_state['auto_c1'] = None
@@ -132,7 +131,7 @@ if st.session_state['usuario_activo'] is None:
             user_match = df_j[(df_j['Nombre']==u.strip()) & (df_j['Password']==p.strip())]
             if not user_match.empty:
                 st.session_state['usuario_activo'] = u.strip()
-                controller.set('SasianGP_Piloto', u.strip()) # <-- INYECCIÓN DE GALLETA
+                controller.set('SasianGP_Piloto', u.strip()) 
                 campeonatos_usuario = str(user_match.iloc[0].get('Campeonato', '')).strip().split(',')
                 st.session_state['campeonato_activo'] = campeonatos_usuario[0].strip() if campeonatos_usuario[0] else "Sin Campeonato"
                 st.success("✅ ¡Semáforo en verde! Entrando al Paddock...")
@@ -190,7 +189,6 @@ if st.session_state['usuario_activo'] is None:
                 password_usuario = str(match.iloc[0]['Password'])
                 
                 if correo_destino and correo_destino != "nan" and correo_destino != "":
-                    # --- CONFIGURACIÓN DEL REMITENTE ---
                     correo_escuderia = "rsasian.qwerty@gmail.com" 
                     password_app = "pkfosnupqdlmfrox"
                     
@@ -266,7 +264,7 @@ else:
         
         st.markdown("---")
         if st.button("🚪 Salir de los Pits"):
-            controller.remove('SasianGP_Piloto') # <-- ELIMINA LA GALLETA AL SALIR
+            controller.remove('SasianGP_Piloto')
             st.session_state['usuario_activo'] = None
             st.session_state['campeonato_activo'] = None
             st.rerun()
@@ -282,6 +280,33 @@ else:
         </div>
     """, unsafe_allow_html=True)
     
+    # --- SISTEMA DE MENSAJES GLOBALES (ANIMADO) ---
+    df_msg = fetch_data_mensajes()
+    if not df_msg.empty:
+        msg_texto = str(df_msg.iloc[0].get('Aviso', '')).strip()
+        msg_tipo = str(df_msg.iloc[0].get('Tipo', 'Informativo')).strip()
+        
+        if msg_texto and msg_texto != "nan":
+            colores = {
+                "Crítico": "background-color: #E10600; color: white;", 
+                "Alerta": "background-color: #FFC107; color: black;", 
+                "Éxito": "background-color: #00e676; color: black;",  
+                "Informativo": "background-color: #2196F3; color: white;" 
+            }
+            iconos = {"Crítico": "🚨", "Alerta": "🟡", "Éxito": "🟢", "Informativo": "🔵"}
+            
+            estilo = colores.get(msg_tipo, colores["Informativo"])
+            icono = iconos.get(msg_tipo, iconos["Informativo"])
+            
+            html_ticker = f"""
+            <div style="{estilo} padding: 10px; border-radius: 8px; font-weight: bold; font-size: 1.2rem; margin-bottom: 15px; border: 1px solid #444;">
+                <marquee behavior="scroll" direction="left" scrollamount="10">
+                    {icono} <strong>DIRECCIÓN DE CARRERA:</strong> {msg_texto} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {icono} <strong>DIRECCIÓN DE CARRERA:</strong> {msg_texto}
+                </marquee>
+            </div>
+            """
+            st.markdown(html_ticker, unsafe_allow_html=True)
+
     if st.session_state['campeonato_activo'] == "Sin Campeonato":
         st.error("🚨 Estás en la sala de espera. Un Comisario debe aprobar tu solicitud antes de poder entrar al Paddock.")
     
@@ -342,7 +367,6 @@ else:
 
                 ahora = datetime.utcnow() - timedelta(hours=6)
                 
-                # REGLA FARÍ: Bloqueo el Jueves a las 23:59:59 de la semana de carrera
                 dt_q = pd.to_datetime(fecha_q_str, format="%H:%M %d-%m-%Y", errors='coerce')
                 if pd.notna(dt_q):
                     dias_para_jueves = dt_q.weekday() - 3 
@@ -353,7 +377,6 @@ else:
                         bq = bc = bs = True
                         st.error("🔒 PARQUE CERRADO (Regla Farí). Los pits se cerraron el Jueves a las 23:59 hrs CDMX. Ya no se aceptan ni se modifican apuestas.")
 
-                # Bloqueos por sesión individual (por si falla Farí)
                 if not cerrado_fari:
                     dt_c = pd.to_datetime(fecha_c_str, format="%H:%M %d-%m-%Y", errors='coerce')
                     dt_s = pd.to_datetime(fecha_s_str, format="%H:%M %d-%m-%Y", errors='coerce')
@@ -380,12 +403,9 @@ else:
                 
             ya_aposto, ap_p = not filtro.empty, filtro.iloc[-1].to_dict() if not filtro.empty else {}
             
-            # --- NUEVO MENSAJE DE ACTUALIZACIÓN ---
             if ya_aposto: 
-                if cerrado_fari:
-                    st.warning(f"🔒 Parque Cerrado. Este es tu pronóstico final e inamovible para **{st.session_state['campeonato_activo']}**.")
-                else:
-                    st.info(f"📝 Ya tienes un pronóstico para **{st.session_state['campeonato_activo']}**. Puedes modificarlo las veces que quieras antes de que cierren los Pits.")
+                if cerrado_fari: st.warning(f"🔒 Parque Cerrado. Este es tu pronóstico final e inamovible para **{st.session_state['campeonato_activo']}**.")
+                else: st.info(f"📝 Ya tienes un pronóstico para **{st.session_state['campeonato_activo']}**. Puedes modificarlo las veces que quieras antes de que cierren los Pits.")
 
             def get_idx(campo): return pilotos.index(ap_p.get(campo)) if ya_aposto and ap_p.get(campo) in pilotos else None
 
@@ -463,14 +483,12 @@ else:
                         else:
                             filtro_c = pd.DataFrame()
                         
-                        # Blindaje extremo contra int64
                         try:
                             val_pts = filtro_c.iloc[-1].get('Puntos_Totales', 0) if not filtro_c.empty else 0
                             pts_previos = int(val_pts.item()) if hasattr(val_pts, 'item') else int(val_pts)
                         except:
                             pts_previos = 0
                         
-                        # Todo se convierte a string (texto) menos los puntos
                         fila_guardar = [(datetime.utcnow()-timedelta(hours=6)).strftime("%Y-%m-%d %H:%M:%S"), str(st.session_state['usuario_activo']), str(gp_sel), str(q1), str(q2), str(q3), str(v_s1), str(v_s2), str(v_s3), str(g1), str(g2), str(g3), str(vr), str(pdia), str(ab if ab else ""), pts_previos, str(c)]
                         
                         if not filtro_c.empty:
@@ -483,29 +501,20 @@ else:
                         else:
                             filas_a_agregar.append(fila_guardar)
                             
-                    if celdas_a_actualizar:
-                        tabla_quinielas.update_cells(celdas_a_actualizar)
-                    for fila in filas_a_agregar:
-                        tabla_quinielas.append_row(fila)
+                    if celdas_a_actualizar: tabla_quinielas.update_cells(celdas_a_actualizar)
+                    for fila in filas_a_agregar: tabla_quinielas.append_row(fila)
                         
                     st.cache_data.clear()
                     
-                    # --- LA MAGIA DEL SEMÁFORO F1 ---
                     semaforo = st.empty()
-                    
-                    # Secuencia de 5 luces rojas
                     luces = ["🔴 ⚪ ⚪ ⚪ ⚪", "🔴 🔴 ⚪ ⚪ ⚪", "🔴 🔴 🔴 ⚪ ⚪", "🔴 🔴 🔴 🔴 ⚪", "🔴 🔴 🔴 🔴 🔴"]
                     for luz in luces:
                         semaforo.markdown(f"<h1 style='text-align: center; letter-spacing: 15px;'>{luz}</h1>", unsafe_allow_html=True)
-                        time.sleep(0.5) # Medio segundo entre cada luz
+                        time.sleep(0.5) 
                         
-                    time.sleep(0.8) # Pausa dramática con las 5 luces rojas
-                    
-                    # Luces verdes y celebración
+                    time.sleep(0.8) 
                     semaforo.markdown("<h1 style='text-align: center; letter-spacing: 15px;'>🟢 🟢 🟢 🟢 🟢</h1><h3 style='text-align: center;'>🏎️💨 ¡Y ARRANCAN! Apuesta sellada.</h3>", unsafe_allow_html=True)
-                    #st.balloons() # Lluvia de globos de confirmación
-                    time.sleep(2) # Espera 2 segundos para que el piloto disfrute el show
-                    
+                    time.sleep(2) 
                     st.rerun()
 
     # --- MENÚ: EL PADDOCK ---
@@ -690,6 +699,20 @@ else:
         st.error("Los resultados son validados por el mismísimo **Sasian**. La decisión final es absoluta e inapelable.")
 
     elif menu == "👑 Admin FIA":
+        st.header("📢 Pizarra de Dirección de Carrera")
+        with st.expander("Modificar Mensaje Global"):
+            with st.form("form_mensaje"):
+                nuevo_msg = st.text_area("Texto del mensaje (deja en blanco para borrarlo):")
+                tipo_msg = st.selectbox("Tipo de Mensaje:", ["Informativo", "Crítico", "Alerta", "Éxito"])
+                
+                if st.form_submit_button("📡 Transmitir a todos los pilotos"):
+                    tabla_mensajes.update_cell(2, 1, nuevo_msg)
+                    tabla_mensajes.update_cell(2, 2, tipo_msg)
+                    st.cache_data.clear()
+                    st.success("✅ Mensaje transmitido a toda la parrilla.")
+                    st.rerun()
+        st.markdown("---")
+        
         sel_car = st.selectbox("Gran Premio a Dictaminar:", lista_carreras_oficial)
         f_cal = df_cal_global[df_cal_global['Carrera'] == sel_car]
         es_sprint = False
