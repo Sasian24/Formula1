@@ -31,14 +31,16 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-import json # <-- Asegúrate de que esto esté hasta arriba con tus otros imports
+import json # <-- ¡Súper importante que esto esté hasta arriba con tus otros imports!
 
 # --- 2. CONEXIÓN A BASE DE DATOS (ANTICOLAPSO V2) ---
 @st.cache_resource
 def init_gspread():
+    # En lugar de buscar un archivo físico, llamamos a la bóveda secreta
     caja_fuerte = st.secrets["gcp_json"]
     cred_dict = json.loads(caja_fuerte)
     
+    # Nos conectamos usando el diccionario, no el archivo
     gc = gspread.service_account_from_dict(cred_dict)
     sh = gc.open("SasianGP_DB")
     return (
