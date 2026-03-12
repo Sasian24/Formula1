@@ -1,3 +1,4 @@
+import json
 import streamlit as st
 import gspread
 from datetime import datetime, timedelta, date
@@ -31,8 +32,6 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-import json # <-- ¡Súper importante que esto esté hasta arriba con tus otros imports!
-
 # --- 2. CONEXIÓN A BASE DE DATOS (ANTICOLAPSO V2) ---
 @st.cache_resource
 def init_gspread():
@@ -65,7 +64,6 @@ def fetch_data_quinielas(): return pd.DataFrame(tabla_quinielas.get_all_records(
 @st.cache_data(ttl=600)
 def fetch_data_calendario():
     try:
-        # Usamos la hoja que ya abrimos arriba, sin intentar conectarnos de nuevo
         data = tabla_calendario.get_all_values()
         if len(data) > 1:
             return pd.DataFrame(data[1:], columns=data[0])
@@ -91,15 +89,15 @@ def fetch_data_mensajes(): return pd.DataFrame(tabla_mensajes.get_all_records())
 
 # --- 3. LOGOS Y PILOTOS ---
 url_logos = {
-    "red bull racing": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/red_bull.png",
+    "red bull racing": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/red-bull.png",
     "ferrari": "https://raw.githubusercontent.com/Sasian24/Formula1/main/ferrari.png",
     "mercedes": "https://raw.githubusercontent.com/Sasian24/Formula1/main/mercedes.png",
     "mclaren": "https://raw.githubusercontent.com/Sasian24/Formula1/main/mclaren.png",
-    "aston martin": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/aston_martin.png",
+    "aston martin": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/aston-martin.png",
     "alpine": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/alpine.png",
     "williams": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/williams.png",
-    "racing bulls": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/racing_bulls.png",
-    "audi": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/audi.png",
+    "racing bulls": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/rb.png",
+    "audi": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/sauber.png",
     "haas": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/haas.png",
     "cadillac": "https://raw.githubusercontent.com/Sasian24/Formula1/main/cadillac.png"
 }
@@ -302,64 +300,51 @@ else:
                         st.rerun()
                     else:
                         st.warning("⚠️ Necesitas escribir un nombre para el campeonato.")
-    with st.sidebar:
-        st.markdown(f"### 🏎️ Pits: {st.session_state['usuario_activo']}")
-        
-        # ... (código de selección de campeonato) ...
 
-        with st.expander("➕ Unirme o Crear Campeonato"):
-            df_todas = fetch_data_campeonatos_admin() # <-- ESTO DEBE TENER 4 ESPACIOS MÁS QUE EL 'with' DE ARRIBA
-            # ... (todo el código de unirse a campeonato va aquí adentro, bien espaciado) ...
-
-        # 🔧 FÍJATE AQUÍ: Este nuevo 'with' tiene que estar alineado EXACTAMENTE a la misma altura que el 'with' de "Unirme o Crear"
+        # --- AQUÍ ESTÁ EL PERFIL PERFECTAMENTE ALINEADO ---
         with st.expander("👤 Editar Mi Perfil"):
-            df_j = fetch_data_jugadores() # <-- Y lo de adentro lleva 4 espacios extra
-            match_usr = df_j[df_j['Nombre'] == st.session_state['usuario_activo']]
-            # ... (el resto del código que te pasé) ...
+            df_j_perfil = fetch_data_jugadores()
+            match_usr_perfil = df_j_perfil[df_j_perfil['Nombre'] == st.session_state['usuario_activo']]
 
-                if not match_usr.empty:
-                    idx_jug = match_usr.index[0]
-                    fila_excel = int(idx_jug) + 2
+            if not match_usr_perfil.empty:
+                idx_jug_p = match_usr_perfil.index[0]
+                fila_excel_p = int(idx_jug_p) + 2
 
-                    correo_actual = str(match_usr.iloc[0].get('Correo', '')).strip()
-                    wp_actual = str(match_usr.iloc[0].get('WhatsApp', '')).strip()
-                    pass_actual = str(match_usr.iloc[0].get('Password', '')).strip()
-                    piloto_actual = str(match_usr.iloc[0].get('Piloto_Favorito', '')).strip()
-                    escu_actual = str(match_usr.iloc[0].get('Escuderia_Favorita', '')).strip().lower()
+                correo_actual = str(match_usr_perfil.iloc[0].get('Correo', '')).strip()
+                wp_actual = str(match_usr_perfil.iloc[0].get('WhatsApp', '')).strip()
+                pass_actual = str(match_usr_perfil.iloc[0].get('Password', '')).strip()
+                piloto_actual = str(match_usr_perfil.iloc[0].get('Piloto_Favorito', '')).strip()
+                escu_actual = str(match_usr_perfil.iloc[0].get('Escuderia_Favorita', '')).strip().lower()
 
-                    idx_piloto = pilotos.index(piloto_actual) if piloto_actual in pilotos else None
-                    claves_escuderias = list(url_logos.keys())
-                    idx_escu = claves_escuderias.index(escu_actual) if escu_actual in claves_escuderias else None
+                idx_piloto = pilotos.index(piloto_actual) if piloto_actual in pilotos else None
+                claves_escuderias = list(url_logos.keys())
+                idx_escu = claves_escuderias.index(escu_actual) if escu_actual in claves_escuderias else None
 
-                    with st.form("form_perfil_sidebar"):
-                        n_correo = st.text_input("Correo:", value=correo_actual if correo_actual != "nan" else "")
-                        n_wp = st.text_input("WhatsApp:", value=wp_actual if wp_actual != "nan" else "")
-                        n_pass = st.text_input("Contraseña:", value=pass_actual, type="password")
-                        n_piloto = st.selectbox("Piloto Favorito:", pilotos, index=idx_piloto, placeholder="Elige...")
-                        n_escu = st.selectbox("Escudería:", claves_escuderias, index=idx_escu)
-                        
-                        if st.form_submit_button("💾 Guardar"):
-                            if not n_correo or not n_escu:
-                                st.error("⚠️ Correo y escudería requeridos.")
-                            else:
-                                celdas_actualizar = [
-                                    gspread.Cell(row=fila_excel, col=3, value=n_pass.strip()),
-                                    gspread.Cell(row=fila_excel, col=4, value=n_wp.strip()),
-                                    gspread.Cell(row=fila_excel, col=5, value=n_correo.strip()),
-                                    gspread.Cell(row=fila_excel, col=7, value=n_piloto if n_piloto else ""),
-                                    gspread.Cell(row=fila_excel, col=9, value=n_escu)
-                                ]
-                                tabla_jugadores.update_cells(celdas_actualizar)
-                                st.cache_data.clear()
-                                st.success("✅ Actualizado")
-                                time.sleep(1)
-                                st.rerun()
-                else:
-                    st.error("❌ Datos no encontrados.")
-
-            st.markdown("---")
-            # Y aquí siguen tus opciones de navegación normales...
-            opciones_nav = ["📝 Hacer Apuesta", "🏆 El Paddock", "📊 Paddock Detallado", "📖 Reglamento Oficial", "📘 Manual del Piloto"]                        
+                with st.form("form_perfil_sidebar"):
+                    n_correo = st.text_input("Correo:", value=correo_actual if correo_actual != "nan" else "")
+                    n_wp = st.text_input("WhatsApp:", value=wp_actual if wp_actual != "nan" else "")
+                    n_pass = st.text_input("Contraseña:", value=pass_actual, type="password")
+                    n_piloto = st.selectbox("Piloto Favorito:", pilotos, index=idx_piloto, placeholder="Elige...")
+                    n_escu = st.selectbox("Escudería:", claves_escuderias, index=idx_escu)
+                    
+                    if st.form_submit_button("💾 Guardar"):
+                        if not n_correo or not n_escu:
+                            st.error("⚠️ Correo y escudería requeridos.")
+                        else:
+                            celdas_actualizar = [
+                                gspread.Cell(row=fila_excel_p, col=3, value=n_pass.strip()),
+                                gspread.Cell(row=fila_excel_p, col=4, value=n_wp.strip()),
+                                gspread.Cell(row=fila_excel_p, col=5, value=n_correo.strip()),
+                                gspread.Cell(row=fila_excel_p, col=7, value=n_piloto if n_piloto else ""),
+                                gspread.Cell(row=fila_excel_p, col=9, value=n_escu)
+                            ]
+                            tabla_jugadores.update_cells(celdas_actualizar)
+                            st.cache_data.clear()
+                            st.success("✅ Actualizado")
+                            time.sleep(1)
+                            st.rerun()
+            else:
+                st.error("❌ Datos no encontrados.")
 
         st.markdown("---")
         opciones_nav = ["📝 Hacer Apuesta", "🏆 El Paddock", "📊 Paddock Detallado", "📖 Reglamento Oficial", "📘 Manual del Piloto"]
@@ -637,13 +622,8 @@ else:
             res = df_q.groupby('Jugador')['Puntos_Totales'].sum().reset_index()
             
             if not df_j.empty:
-                # 🔧 AQUÍ ESTÁ LA CORRECCIÓN CLAVE: left_on='Jugador'
                 res = res.merge(df_j[['Nombre', 'Escuderia_Favorita']], left_on='Jugador', right_on='Nombre', how='left')
-                
-                # LA MAGIA DE LOS LOGOS:
                 res['🛡️'] = res['Escuderia_Favorita'].str.lower().str.strip().map(url_logos).fillna(url_logos["cadillac"])
-                
-                # AHORA SÍ renombramos 'Jugador' a 'Piloto' para que se vea bonito en la tabla
                 res = res.rename(columns={'Jugador': 'Piloto', 'Escuderia_Favorita': 'Escudería', 'Puntos_Totales': 'Puntos'})
                 res = res[['🛡️', 'Piloto', 'Escudería', 'Puntos']]
             else: 
