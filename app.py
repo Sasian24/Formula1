@@ -43,10 +43,11 @@ def init_gspread():
         sh.worksheet("Calendario"),
         sh.worksheet("Campeonatos_Admin"),
         sh.worksheet("Solicitudes"),
-        sh.worksheet("Mensajes")
+        sh.worksheet("Mensajes"),
+        sh # <-- AGREGAMOS ESTO PARA RETORNAR LA HOJA COMPLETA
     )
 
-tabla_quinielas, tabla_jugadores, tabla_resultados, tabla_calendario, tabla_campeonatos_admin, tabla_solicitudes, tabla_mensajes = init_gspread()
+tabla_quinielas, tabla_jugadores, tabla_resultados, tabla_calendario, tabla_campeonatos_admin, tabla_solicitudes, tabla_mensajes, sh_completa = init_gspread()
 
 @st.cache_data(ttl=60)
 def fetch_data_jugadores(): return pd.DataFrame(tabla_jugadores.get_all_records())
@@ -57,9 +58,8 @@ def fetch_data_quinielas(): return pd.DataFrame(tabla_quinielas.get_all_records(
 @st.cache_data(ttl=600)
 def fetch_data_calendario():
     try:
-        # Intenta abrir la pestaña Calendario
-        sheet = client.open_by_key(st.secrets["spreadsheet_id"]).worksheet("Calendario")
-        data = sheet.get_all_values()
+        # Usamos la hoja que ya abrimos arriba, sin intentar conectarnos de nuevo
+        data = tabla_calendario.get_all_values()
         if len(data) > 1:
             return pd.DataFrame(data[1:], columns=data[0])
         return pd.DataFrame()
