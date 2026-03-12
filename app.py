@@ -745,6 +745,7 @@ else:
             st.markdown("""
             El escáner a fondo de cada carrera. 
             * Selecciona un Gran Premio específico para ver exactamente qué piloto apostó cada quién.
+            * **🕵️‍♂️ Modo Anti-Espionaje:** Para evitar copias, los pronósticos de los demás pilotos se mantendrán ocultos como *'🔒 Registrado'* y se revelarán automáticamente al cerrarse los Pits (Jueves 23:59 hrs).
             * **Código de colores:** Sabrás al instante por qué ganaste o perdiste puntos. Verde (+3 acierto exacto), Amarillo (+1 acierto desordenado), Rojo (0 fallaste), Dorado (+5 acierto Salado) y Gris (-2 fallaste el Salado).
             """)
             
@@ -777,6 +778,9 @@ else:
         
         st.markdown("**7. La app me sacó una 'Bandera Negra' al intentar guardar mi apuesta, ¿por qué?**")
         st.error("Seguramente pusiste al mismo piloto dos veces en la misma sección (ej. a Verstappen en P1 y también en P2). Revisa que no tengas nombres repetidos en tus podios; la app no te dejará avanzar hasta que lo corrijas.")
+
+        st.markdown("**8. ¿Por qué veo candados (🔒 Registrado) en lugar de los pronósticos de los demás?**")
+        st.info("Es el **Modo Anti-Espionaje**. Para evitar que se copien estrategias, solo puedes ver tu propio pronóstico antes de la carrera. En el instante en que se cierra la ventana de apuestas (Jueves 23:59 hrs), el sistema quita la lona y revela las apuestas de toda la parrilla automáticamente.")
 
     elif menu == "👑 Admin FIA":
         st.header("📢 Pizarra de Dirección de Carrera")
