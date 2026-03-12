@@ -31,10 +31,15 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+import json # <-- Asegúrate de que esto esté hasta arriba con tus otros imports
+
 # --- 2. CONEXIÓN A BASE DE DATOS (ANTICOLAPSO V2) ---
 @st.cache_resource
 def init_gspread():
-    gc = gspread.service_account(filename="Config/credenciales.json")
+    caja_fuerte = st.secrets["gcp_json"]
+    cred_dict = json.loads(caja_fuerte)
+    
+    gc = gspread.service_account_from_dict(cred_dict)
     sh = gc.open("SasianGP_DB")
     return (
         sh.worksheet("Quinielas"),
@@ -44,7 +49,7 @@ def init_gspread():
         sh.worksheet("Campeonatos_Admin"),
         sh.worksheet("Solicitudes"),
         sh.worksheet("Mensajes"),
-        sh # <-- AGREGAMOS ESTO PARA RETORNAR LA HOJA COMPLETA
+        sh
     )
 
 tabla_quinielas, tabla_jugadores, tabla_resultados, tabla_calendario, tabla_campeonatos_admin, tabla_solicitudes, tabla_mensajes, sh_completa = init_gspread()
