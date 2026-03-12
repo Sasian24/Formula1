@@ -560,146 +560,146 @@ else:
         else: st.info("Aún no hay apuestas selladas en este campeonato.")
 
     # --- MENÚ: PADDOCK DETALLADO ---
-        elif menu == "📊 Paddock Detallado":
-            st.subheader(f"🔍 Análisis de Telemetría - Campeonato: {st.session_state['campeonato_activo']}")
-            df_q = fetch_data_quinielas()
-            df_j = fetch_data_jugadores()
-            
-            if not df_q.empty and 'Campeonato' in df_q.columns:
-                df_q.columns = [str(c).strip() for c in df_q.columns]
-                df_q = df_q[df_q['Campeonato'].astype(str).str.strip() == st.session_state['campeonato_activo']]
-    
-                op_v = st.selectbox("Ver:", ["🏆 Total"] + lista_carreras_oficial)
-                if op_v == "🏆 Total":
-                    df_q['Puntos_Totales'] = pd.to_numeric(df_q.get('Puntos_Totales', 0), errors='coerce').fillna(0)
-                    res = df_q.groupby('Jugador')['Puntos_Totales'].sum().reset_index()
-                    if not df_j.empty:
-                        res = res.merge(df_j[['Nombre', 'Escuderia_Favorita']], left_on='Jugador', right_on='Nombre', how='left')
-                        res = res.rename(columns={'Jugador': 'Piloto', 'Escuderia_Favorita': 'Escudería', 'Puntos_Totales': 'Puntos'})
-                        res = res[['Piloto', 'Escudería', 'Puntos']]
-                    else: res = res.rename(columns={'Jugador': 'Piloto', 'Puntos_Totales': 'Puntos'})
-                    res = res.sort_values('Puntos', ascending=False).reset_index(drop=True)
+    elif menu == "📊 Paddock Detallado":
+        st.subheader(f"🔍 Análisis de Telemetría - Campeonato: {st.session_state['campeonato_activo']}")
+        df_q = fetch_data_quinielas()
+        df_j = fetch_data_jugadores()
+        
+        if not df_q.empty and 'Campeonato' in df_q.columns:
+            df_q.columns = [str(c).strip() for c in df_q.columns]
+            df_q = df_q[df_q['Campeonato'].astype(str).str.strip() == st.session_state['campeonato_activo']]
+
+            op_v = st.selectbox("Ver:", ["🏆 Total"] + lista_carreras_oficial)
+            if op_v == "🏆 Total":
+                df_q['Puntos_Totales'] = pd.to_numeric(df_q.get('Puntos_Totales', 0), errors='coerce').fillna(0)
+                res = df_q.groupby('Jugador')['Puntos_Totales'].sum().reset_index()
+                if not df_j.empty:
+                    res = res.merge(df_j[['Nombre', 'Escuderia_Favorita']], left_on='Jugador', right_on='Nombre', how='left')
+                    res = res.rename(columns={'Jugador': 'Piloto', 'Escuderia_Favorita': 'Escudería', 'Puntos_Totales': 'Puntos'})
+                    res = res[['Piloto', 'Escudería', 'Puntos']]
+                else: res = res.rename(columns={'Jugador': 'Piloto', 'Puntos_Totales': 'Puntos'})
+                res = res.sort_values('Puntos', ascending=False).reset_index(drop=True)
+                
+                html_table = '<table style="width:100%; border-collapse: collapse; font-family: sans-serif;">'
+                html_table += '<thead><tr style="background-color: #2e2e3e; color: white;">'
+                html_table += '<th style="text-align:center; padding: 12px; border-bottom: 2px solid #E10600;">Piloto</th>'
+                html_table += '<th style="text-align:center; padding: 12px; border-bottom: 2px solid #E10600;">Escudería</th>'
+                html_table += '<th style="text-align:center; padding: 12px; border-bottom: 2px solid #E10600;">Puntos</th>'
+                html_table += '</tr></thead><tbody>'
+                for _, row in res.iterrows():
+                    html_table += '<tr style="border-bottom: 1px solid #444; background-color: transparent;">'
+                    html_table += f'<td style="text-align:center; padding: 10px; vertical-align: middle;">{row["Piloto"]}</td>'
+                    html_table += f'<td style="text-align:center; padding: 10px; vertical-align: middle;">{row.get("Escudería", "")}</td>'
+                    html_table += f'<td style="text-align:center; padding: 10px; vertical-align: middle; font-weight: bold; font-size: 1.1rem;">{int(row["Puntos"])}</td>'
+                    html_table += '</tr>'
+                html_table += '</tbody></table>'
+                st.markdown(html_table, unsafe_allow_html=True)
+            else:
+                st.markdown("""
+                <div style="text-align: center; margin: 10px 0px 20px 0px; font-size: 1.1rem; background-color: #1e1e1e; padding: 12px; border-radius: 8px; border: 1px solid #333;">
+                    <span style="color: #00e676; font-weight: bold;">Verde +3</span> <span style="color: #666; margin: 0 10px;">|</span> 
+                    <span style="color: #ffb300; font-weight: bold;">Amarillo +1</span> <span style="color: #666; margin: 0 10px;">|</span> 
+                    <span style="color: #ff5252; font-weight: bold;">Rojo = 0</span> <span style="color: #666; margin: 0 10px;">|</span> 
+                    <span style="color: gray; font-weight: bold;">Gris -2</span> <span style="color: #666; margin: 0 10px;">|</span> 
+                    <span style="color: #FFD700; font-weight: bold; text-shadow: 1px 1px 2px #000;">Dorado +5</span>
+                </div>
+                """, unsafe_allow_html=True)
+
+                df_f = df_q[df_q['Carrera'] == op_v].copy()
+                f_cal = df_cal_global[df_cal_global['Carrera'] == op_v]
+                es_sprint = False
+                cerrado_fari_detalle = False
+                
+                if not f_cal.empty:
+                    if 'Es_Sprint' in f_cal.columns: es_sprint = str(f_cal.iloc[0]['Es_Sprint']).strip().upper() in ['SI', 'SÍ', 'TRUE', '1', 'S']
                     
-                    html_table = '<table style="width:100%; border-collapse: collapse; font-family: sans-serif;">'
-                    html_table += '<thead><tr style="background-color: #2e2e3e; color: white;">'
-                    html_table += '<th style="text-align:center; padding: 12px; border-bottom: 2px solid #E10600;">Piloto</th>'
-                    html_table += '<th style="text-align:center; padding: 12px; border-bottom: 2px solid #E10600;">Escudería</th>'
-                    html_table += '<th style="text-align:center; padding: 12px; border-bottom: 2px solid #E10600;">Puntos</th>'
-                    html_table += '</tr></thead><tbody>'
-                    for _, row in res.iterrows():
-                        html_table += '<tr style="border-bottom: 1px solid #444; background-color: transparent;">'
-                        html_table += f'<td style="text-align:center; padding: 10px; vertical-align: middle;">{row["Piloto"]}</td>'
-                        html_table += f'<td style="text-align:center; padding: 10px; vertical-align: middle;">{row.get("Escudería", "")}</td>'
-                        html_table += f'<td style="text-align:center; padding: 10px; vertical-align: middle; font-weight: bold; font-size: 1.1rem;">{int(row["Puntos"])}</td>'
-                        html_table += '</tr>'
-                    html_table += '</tbody></table>'
-                    st.markdown(html_table, unsafe_allow_html=True)
-                else:
-                    st.markdown("""
-                    <div style="text-align: center; margin: 10px 0px 20px 0px; font-size: 1.1rem; background-color: #1e1e1e; padding: 12px; border-radius: 8px; border: 1px solid #333;">
-                        <span style="color: #00e676; font-weight: bold;">Verde +3</span> <span style="color: #666; margin: 0 10px;">|</span> 
-                        <span style="color: #ffb300; font-weight: bold;">Amarillo +1</span> <span style="color: #666; margin: 0 10px;">|</span> 
-                        <span style="color: #ff5252; font-weight: bold;">Rojo = 0</span> <span style="color: #666; margin: 0 10px;">|</span> 
-                        <span style="color: gray; font-weight: bold;">Gris -2</span> <span style="color: #666; margin: 0 10px;">|</span> 
-                        <span style="color: #FFD700; font-weight: bold; text-shadow: 1px 1px 2px #000;">Dorado +5</span>
-                    </div>
-                    """, unsafe_allow_html=True)
-    
-                    df_f = df_q[df_q['Carrera'] == op_v].copy()
-                    f_cal = df_cal_global[df_cal_global['Carrera'] == op_v]
-                    es_sprint = False
-                    cerrado_fari_detalle = False
+                    # --- CÁLCULO DE REGLA FARÍ PARA EL MODO ANTI-ESPIONAJE ---
+                    fecha_q_str = f_cal.iloc[0].get('Fecha_Qualy', '')
+                    ahora = datetime.utcnow() - timedelta(hours=6)
+                    dt_q = pd.to_datetime(fecha_q_str, format="%H:%M %d-%m-%Y", errors='coerce')
+                    if pd.notna(dt_q):
+                        dias_para_jueves = dt_q.weekday() - 3 
+                        jueves_limite = (dt_q - timedelta(days=dias_para_jueves)).replace(hour=23, minute=59, second=59)
+                        if ahora > jueves_limite:
+                            cerrado_fari_detalle = True
+
+                if not df_f.empty:
+                    def ac_n(n): return str(n).split()[-1] if (pd.notna(n) and " " in str(n)) else str(n)
+                    todos_res = fetch_vals_resultados()
+                    r_of = {}
+                    for fila in reversed(todos_res):
+                        if len(fila) >= 13 and fila[0] == op_v:
+                            r_of = {'Q1': ac_n(fila[1]), 'Q2': ac_n(fila[2]), 'Q3': ac_n(fila[3]), 'S1': ac_n(fila[4]), 'S2': ac_n(fila[5]), 'S3': ac_n(fila[6]), 'P1': ac_n(fila[7]), 'P2': ac_n(fila[8]), 'P3': ac_n(fila[9]), 'VR': ac_n(fila[10]), 'PD': ac_n(fila[11]), 'Salado': ac_n(fila[12])}
+                            break
                     
-                    if not f_cal.empty:
-                        if 'Es_Sprint' in f_cal.columns: es_sprint = str(f_cal.iloc[0]['Es_Sprint']).strip().upper() in ['SI', 'SÍ', 'TRUE', '1', 'S']
+                    df_f = df_f.rename(columns={"Qualy_P1":"Q1","Qualy_P2":"Q2","Qualy_P3":"Q3", "Sprint_P1":"S1", "Sprint_P2":"S2", "Sprint_P3":"S3", "Carrera_P1":"P1","Carrera_P2":"P2","Carrera_P3":"P3","Vuelta_Rapida":"VR","Piloto_Del_Dia":"PD","Primer_Abandono":"Salado","Puntos_Totales":"Pts"})
+                    columnas_renombrar = ["Q1","Q2","Q3","S1","S2","S3","P1","P2","P3","VR","PD","Salado"]
+                    columnas_base = ["Q1","Q2","Q3","P1","P2","P3","VR","PD","Salado"]
+                    
+                    if es_sprint:
+                        for c in columnas_renombrar: 
+                            if c in df_f.columns: df_f[c] = df_f[c].apply(ac_n)
+                    else:
+                        for c in columnas_base: 
+                            if c in df_f.columns: df_f[c] = df_f[c].apply(ac_n)
+                    
+                    rename_dict = {}
+                    cols_iterar = ["Q1","Q2","Q3","S1","S2","S3","P1","P2","P3","VR","PD","Salado", "Pts"] if es_sprint else ["Q1","Q2","Q3","P1","P2","P3","VR","PD","Salado", "Pts"]
+                    
+                    for col in cols_iterar:
+                        if col in r_of and r_of[col] != "": rename_dict[col] = f"{col}<br><span style='font-size:0.8rem; color:#aaa;'>({r_of[col]})</span>"
+                        else: rename_dict[col] = col
                         
-                        # --- CÁLCULO DE REGLA FARÍ PARA EL MODO ANTI-ESPIONAJE ---
-                        fecha_q_str = f_cal.iloc[0].get('Fecha_Qualy', '')
-                        ahora = datetime.utcnow() - timedelta(hours=6)
-                        dt_q = pd.to_datetime(fecha_q_str, format="%H:%M %d-%m-%Y", errors='coerce')
-                        if pd.notna(dt_q):
-                            dias_para_jueves = dt_q.weekday() - 3 
-                            jueves_limite = (dt_q - timedelta(days=dias_para_jueves)).replace(hour=23, minute=59, second=59)
-                            if ahora > jueves_limite:
-                                cerrado_fari_detalle = True
-    
-                    if not df_f.empty:
-                        def ac_n(n): return str(n).split()[-1] if (pd.notna(n) and " " in str(n)) else str(n)
-                        todos_res = fetch_vals_resultados()
-                        r_of = {}
-                        for fila in reversed(todos_res):
-                            if len(fila) >= 13 and fila[0] == op_v:
-                                r_of = {'Q1': ac_n(fila[1]), 'Q2': ac_n(fila[2]), 'Q3': ac_n(fila[3]), 'S1': ac_n(fila[4]), 'S2': ac_n(fila[5]), 'S3': ac_n(fila[6]), 'P1': ac_n(fila[7]), 'P2': ac_n(fila[8]), 'P3': ac_n(fila[9]), 'VR': ac_n(fila[10]), 'PD': ac_n(fila[11]), 'Salado': ac_n(fila[12])}
-                                break
-                        
-                        df_f = df_f.rename(columns={"Qualy_P1":"Q1","Qualy_P2":"Q2","Qualy_P3":"Q3", "Sprint_P1":"S1", "Sprint_P2":"S2", "Sprint_P3":"S3", "Carrera_P1":"P1","Carrera_P2":"P2","Carrera_P3":"P3","Vuelta_Rapida":"VR","Piloto_Del_Dia":"PD","Primer_Abandono":"Salado","Puntos_Totales":"Pts"})
-                        columnas_renombrar = ["Q1","Q2","Q3","S1","S2","S3","P1","P2","P3","VR","PD","Salado"]
-                        columnas_base = ["Q1","Q2","Q3","P1","P2","P3","VR","PD","Salado"]
-                        
-                        if es_sprint:
-                            for c in columnas_renombrar: 
-                                if c in df_f.columns: df_f[c] = df_f[c].apply(ac_n)
-                        else:
-                            for c in columnas_base: 
-                                if c in df_f.columns: df_f[c] = df_f[c].apply(ac_n)
-                        
-                        rename_dict = {}
-                        cols_iterar = ["Q1","Q2","Q3","S1","S2","S3","P1","P2","P3","VR","PD","Salado", "Pts"] if es_sprint else ["Q1","Q2","Q3","P1","P2","P3","VR","PD","Salado", "Pts"]
-                        
-                        for col in cols_iterar:
-                            if col in r_of and r_of[col] != "": rename_dict[col] = f"{col}<br><span style='font-size:0.8rem; color:#aaa;'>({r_of[col]})</span>"
-                            else: rename_dict[col] = col
-                            
-                        df_f = df_f.rename(columns=rename_dict)
-                        cols_mostrar = ['Jugador'] + list(rename_dict.values())
-                        df_mostrar = df_f[[c for c in cols_mostrar if c in df_f.columns]].copy()
-                        
-                        if list(rename_dict.values())[-1] in df_mostrar.columns:
-                            col_pts = list(rename_dict.values())[-1]
-                            df_mostrar[col_pts] = pd.to_numeric(df_mostrar[col_pts], errors='coerce').fillna(0)
-                            df_mostrar = df_mostrar.sort_values(col_pts, ascending=False).reset_index(drop=True)
-                        
-                        if not cerrado_fari_detalle:
-                            st.warning("🕵️‍♂️ **Modo Anti-Espionaje Activado:** Los pronósticos de los demás pilotos están ocultos. Se revelarán automáticamente el Jueves a las 23:59 hrs.")
-    
-                        html_det = '<table style="width:100%; text-align:center; border-collapse: collapse; font-family: sans-serif;">'
-                        html_det += '<tr style="background-color: #2e2e3e; color: white;">'
+                    df_f = df_f.rename(columns=rename_dict)
+                    cols_mostrar = ['Jugador'] + list(rename_dict.values())
+                    df_mostrar = df_f[[c for c in cols_mostrar if c in df_f.columns]].copy()
+                    
+                    if list(rename_dict.values())[-1] in df_mostrar.columns:
+                        col_pts = list(rename_dict.values())[-1]
+                        df_mostrar[col_pts] = pd.to_numeric(df_mostrar[col_pts], errors='coerce').fillna(0)
+                        df_mostrar = df_mostrar.sort_values(col_pts, ascending=False).reset_index(drop=True)
+                    
+                    if not cerrado_fari_detalle:
+                        st.warning("🕵️‍♂️ **Modo Anti-Espionaje Activado:** Los pronósticos de los demás pilotos están ocultos. Se revelarán automáticamente el Jueves a las 23:59 hrs.")
+
+                    html_det = '<table style="width:100%; text-align:center; border-collapse: collapse; font-family: sans-serif;">'
+                    html_det += '<tr style="background-color: #2e2e3e; color: white;">'
+                    for col in df_mostrar.columns:
+                        titulo = "Piloto" if col == "Jugador" else col
+                        html_det += f'<th style="text-align:center; padding: 10px; border-bottom: 2px solid #E10600; vertical-align: bottom;">{titulo}</th>'
+                    html_det += '</tr>'
+
+                    for _, row in df_mostrar.iterrows():
+                        es_mi_fila = (row['Jugador'] == st.session_state['usuario_activo'])
+                        html_det += '<tr style="border-bottom: 1px solid #444;">'
                         for col in df_mostrar.columns:
-                            titulo = "Piloto" if col == "Jugador" else col
-                            html_det += f'<th style="text-align:center; padding: 10px; border-bottom: 2px solid #E10600; vertical-align: bottom;">{titulo}</th>'
+                            val = str(row[col]).strip() if pd.notna(row[col]) else ""
+                            inner_html = val
+                            
+                            # MAGIA ANTI-ESPIONAJE
+                            if col != 'Jugador' and "Pts" not in col:
+                                if not cerrado_fari_detalle and not es_mi_fila and val not in ["", "nan", "None", "🔒 CERRADO"]:
+                                    inner_html = '<span style="color: #888; font-style: italic;">🔒 Registrado</span>'
+                                elif r_of:
+                                    base = col.split('<br>')[0]
+                                    if val not in ["", "nan", "None", "🔒 CERRADO"]:
+                                        if base == 'Salado':
+                                            real = r_of.get('Salado', '')
+                                            if val == real and real != "": inner_html = f'<span style="color: #FFD700; font-weight: bold; text-shadow: 1px 1px 2px #000;">{val}</span>'
+                                            else: inner_html = f'<span style="color: gray; font-weight: bold;">{val}</span>'
+                                        elif base in r_of:
+                                            real = r_of[base]
+                                            if val == real: inner_html = f'<span style="color: #00e676; font-weight: bold;">{val}</span>'
+                                            elif base in ['P1','P2','P3', 'S1', 'S2', 'S3'] and val in [r_of.get(base[0]+'1'), r_of.get(base[0]+'2'), r_of.get(base[0]+'3')]: inner_html = f'<span style="color: #ffb300; font-weight: bold;">{val}</span>'
+                                            elif base in ['Q1','Q2','Q3'] and val in [r_of.get('Q1'), r_of.get('Q2'), r_of.get('Q3')]: inner_html = f'<span style="color: #ffb300; font-weight: bold;">{val}</span>'
+                                            else: inner_html = f'<span style="color: #ff5252; font-weight: bold;">{val}</span>'
+                            elif "Pts" in col:
+                                inner_html = f'<span style="font-weight: bold; font-size: 1.1rem;">{int(float(val)) if val != "" else 0}</span>'
+                            html_det += f'<td style="padding: 10px; vertical-align: middle; text-align:center;">{inner_html}</td>'
                         html_det += '</tr>'
-    
-                        for _, row in df_mostrar.iterrows():
-                            es_mi_fila = (row['Jugador'] == st.session_state['usuario_activo'])
-                            html_det += '<tr style="border-bottom: 1px solid #444;">'
-                            for col in df_mostrar.columns:
-                                val = str(row[col]).strip() if pd.notna(row[col]) else ""
-                                inner_html = val
-                                
-                                # MAGIA ANTI-ESPIONAJE
-                                if col != 'Jugador' and "Pts" not in col:
-                                    if not cerrado_fari_detalle and not es_mi_fila and val not in ["", "nan", "None", "🔒 CERRADO"]:
-                                        inner_html = '<span style="color: #888; font-style: italic;">🔒 Registrado</span>'
-                                    elif r_of:
-                                        base = col.split('<br>')[0]
-                                        if val not in ["", "nan", "None", "🔒 CERRADO"]:
-                                            if base == 'Salado':
-                                                real = r_of.get('Salado', '')
-                                                if val == real and real != "": inner_html = f'<span style="color: #FFD700; font-weight: bold; text-shadow: 1px 1px 2px #000;">{val}</span>'
-                                                else: inner_html = f'<span style="color: gray; font-weight: bold;">{val}</span>'
-                                            elif base in r_of:
-                                                real = r_of[base]
-                                                if val == real: inner_html = f'<span style="color: #00e676; font-weight: bold;">{val}</span>'
-                                                elif base in ['P1','P2','P3', 'S1', 'S2', 'S3'] and val in [r_of.get(base[0]+'1'), r_of.get(base[0]+'2'), r_of.get(base[0]+'3')]: inner_html = f'<span style="color: #ffb300; font-weight: bold;">{val}</span>'
-                                                elif base in ['Q1','Q2','Q3'] and val in [r_of.get('Q1'), r_of.get('Q2'), r_of.get('Q3')]: inner_html = f'<span style="color: #ffb300; font-weight: bold;">{val}</span>'
-                                                else: inner_html = f'<span style="color: #ff5252; font-weight: bold;">{val}</span>'
-                                elif "Pts" in col:
-                                    inner_html = f'<span style="font-weight: bold; font-size: 1.1rem;">{int(float(val)) if val != "" else 0}</span>'
-                                html_det += f'<td style="padding: 10px; vertical-align: middle; text-align:center;">{inner_html}</td>'
-                            html_det += '</tr>'
-                        html_det += '</table>'
-                        st.markdown(html_det, unsafe_allow_html=True)
-            else: st.info("Aún no hay apuestas selladas en este campeonato para ver la telemetría.")
+                    html_det += '</table>'
+                    st.markdown(html_det, unsafe_allow_html=True)
+        else: st.info("Aún no hay apuestas selladas en este campeonato para ver la telemetría.")
 
     # --- REGLAMENTO Y ADMIN FIA ---
     elif menu == "📖 Reglamento Oficial":
