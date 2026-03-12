@@ -302,6 +302,66 @@ else:
                         st.rerun()
                     else:
                         st.warning("⚠️ Necesitas escribir un nombre para el campeonato.")
+    with st.sidebar:
+            st.markdown(f"### 🏎️ Pits: {st.session_state['usuario_activo']}")
+            
+            camp_sel = st.selectbox("🏆 Viendo Campeonato:", mis_camps, index=mis_camps.index(st.session_state['campeonato_activo']))
+            if camp_sel != st.session_state['campeonato_activo']:
+                st.session_state['campeonato_activo'] = camp_sel
+                st.rerun()
+
+            with st.expander("➕ Unirme o Crear Campeonato"):
+                # ... (Aquí está todo tu código actual de los campeonatos, déjalo intacto) ...
+                # ... (hasta donde termina el warning de "Necesitas escribir un nombre...") ...
+
+            # 🔧 AQUÍ PEGAMOS EL NUEVO CAJÓN DE PERFIL:
+            with st.expander("👤 Editar Mi Perfil"):
+                df_j = fetch_data_jugadores()
+                match_usr = df_j[df_j['Nombre'] == st.session_state['usuario_activo']]
+
+                if not match_usr.empty:
+                    idx_jug = match_usr.index[0]
+                    fila_excel = int(idx_jug) + 2
+
+                    correo_actual = str(match_usr.iloc[0].get('Correo', '')).strip()
+                    wp_actual = str(match_usr.iloc[0].get('WhatsApp', '')).strip()
+                    pass_actual = str(match_usr.iloc[0].get('Password', '')).strip()
+                    piloto_actual = str(match_usr.iloc[0].get('Piloto_Favorito', '')).strip()
+                    escu_actual = str(match_usr.iloc[0].get('Escuderia_Favorita', '')).strip().lower()
+
+                    idx_piloto = pilotos.index(piloto_actual) if piloto_actual in pilotos else None
+                    claves_escuderias = list(url_logos.keys())
+                    idx_escu = claves_escuderias.index(escu_actual) if escu_actual in claves_escuderias else None
+
+                    with st.form("form_perfil_sidebar"):
+                        n_correo = st.text_input("Correo:", value=correo_actual if correo_actual != "nan" else "")
+                        n_wp = st.text_input("WhatsApp:", value=wp_actual if wp_actual != "nan" else "")
+                        n_pass = st.text_input("Contraseña:", value=pass_actual, type="password")
+                        n_piloto = st.selectbox("Piloto Favorito:", pilotos, index=idx_piloto, placeholder="Elige...")
+                        n_escu = st.selectbox("Escudería:", claves_escuderias, index=idx_escu)
+                        
+                        if st.form_submit_button("💾 Guardar"):
+                            if not n_correo or not n_escu:
+                                st.error("⚠️ Correo y escudería requeridos.")
+                            else:
+                                celdas_actualizar = [
+                                    gspread.Cell(row=fila_excel, col=3, value=n_pass.strip()),
+                                    gspread.Cell(row=fila_excel, col=4, value=n_wp.strip()),
+                                    gspread.Cell(row=fila_excel, col=5, value=n_correo.strip()),
+                                    gspread.Cell(row=fila_excel, col=7, value=n_piloto if n_piloto else ""),
+                                    gspread.Cell(row=fila_excel, col=9, value=n_escu)
+                                ]
+                                tabla_jugadores.update_cells(celdas_actualizar)
+                                st.cache_data.clear()
+                                st.success("✅ Actualizado")
+                                time.sleep(1)
+                                st.rerun()
+                else:
+                    st.error("❌ Datos no encontrados.")
+
+            st.markdown("---")
+            # Y aquí siguen tus opciones de navegación normales...
+            opciones_nav = ["📝 Hacer Apuesta", "🏆 El Paddock", "📊 Paddock Detallado", "📖 Reglamento Oficial", "📘 Manual del Piloto"]                        
 
         st.markdown("---")
         opciones_nav = ["📝 Hacer Apuesta", "🏆 El Paddock", "📊 Paddock Detallado", "📖 Reglamento Oficial", "📘 Manual del Piloto"]
