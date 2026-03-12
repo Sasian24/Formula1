@@ -72,17 +72,16 @@ def fetch_data_mensajes(): return pd.DataFrame(tabla_mensajes.get_all_records())
 # --- 3. LOGOS Y PILOTOS ---
 url_logos = {
     "Red Bull Racing": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/red-bull.png",
+    "Ferrari": "https://raw.githubusercontent.com/Sasian24/Formula1/main/ferrari.png",
+    "Mercedes": "https://raw.githubusercontent.com/Sasian24/Formula1/main/mercedes.png",
+    "McLaren": "https://raw.githubusercontent.com/Sasian24/Formula1/main/mclaren.png",
     "Aston Martin": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/aston-martin.png",
     "Alpine": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/alpine.png",
     "Williams": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/williams.png",
     "Racing Bulls": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/rb.png",
     "Audi": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/sauber.png",
     "Haas": "https://raw.githubusercontent.com/f1db/f1db-images/main/images/teams/haas.png",
-    "Cadillac": "https://raw.githubusercontent.com/Sasian24/Formula1/main/cadillac.png",
-    "Ferrari": "https://raw.githubusercontent.com/Sasian24/Formula1/main/ferrari.png",
-    "Mercedes": "https://raw.githubusercontent.com/Sasian24/Formula1/main/mercedes.png",
-    "McLaren": "https://raw.githubusercontent.com/Sasian24/Formula1/main/mclaren.png"
-}
+    "Cadillac": "https://raw.githubusercontent.com/Sasian24/Formula1/main/cadillac.png"
 }
 
 pilotos = sorted([
