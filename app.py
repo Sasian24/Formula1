@@ -43,7 +43,7 @@ def init_gspread():
         sh.worksheet("Calendario"),
         sh.worksheet("Campeonatos_Admin"),
         sh.worksheet("Solicitudes"),
-        sh.worksheet("Mensajes") # <-- NUEVA PESTAÑA CONECTADA
+        sh.worksheet("Mensajes")
     )
 
 tabla_quinielas, tabla_jugadores, tabla_resultados, tabla_calendario, tabla_campeonatos_admin, tabla_solicitudes, tabla_mensajes = init_gspread()
@@ -67,7 +67,7 @@ def fetch_data_campeonatos_admin(): return pd.DataFrame(tabla_campeonatos_admin.
 def fetch_data_solicitudes(): return pd.DataFrame(tabla_solicitudes.get_all_records())
 
 @st.cache_data(ttl=30)
-def fetch_data_mensajes(): return pd.DataFrame(tabla_mensajes.get_all_records()) # <-- LECTOR DE MENSAJES
+def fetch_data_mensajes(): return pd.DataFrame(tabla_mensajes.get_all_records())
 
 # --- 3. LOGOS Y PILOTOS ---
 url_logos = {
@@ -131,7 +131,8 @@ if st.session_state['usuario_activo'] is None:
             user_match = df_j[(df_j['Nombre']==u.strip()) & (df_j['Password']==p.strip())]
             if not user_match.empty:
                 st.session_state['usuario_activo'] = u.strip()
-                controller.set('SasianGP_Piloto', u.strip()) 
+                # GALLETA PERSISTENTE (DURA 1 AÑO EN EL TELÉFONO)
+                controller.set('SasianGP_Piloto', u.strip(), max_age=31536000) 
                 campeonatos_usuario = str(user_match.iloc[0].get('Campeonato', '')).strip().split(',')
                 st.session_state['campeonato_activo'] = campeonatos_usuario[0].strip() if campeonatos_usuario[0] else "Sin Campeonato"
                 st.success("✅ ¡Semáforo en verde! Entrando al Paddock...")
@@ -256,7 +257,7 @@ else:
                 st.info("🏁 Ya eres miembro de todos los campeonatos disponibles.")
 
         st.markdown("---")
-        opciones_nav = ["📝 Hacer Apuesta", "🏆 El Paddock", "📊 Paddock Detallado", "📖 Reglamento Oficial"]
+        opciones_nav = ["📝 Hacer Apuesta", "🏆 El Paddock", "📊 Paddock Detallado", "📖 Reglamento Oficial", "📘 Manual del Piloto"]
         if mis_campeonatos_admin: opciones_nav.append("🛡️ Administrar mis Campeonatos")
         if es_admin_fia: opciones_nav.append("👑 Admin FIA")
         
@@ -697,6 +698,64 @@ else:
         st.warning("Esta apuesta es **OPCIONAL**. ✅ **Si Acertaste:** +5 Puntos directos. ❌ **Si Fallaste:** -2 Puntos.")
         st.markdown("### ⚖️ ARTÍCULO 4: El Director de Carrera es Dios")
         st.error("Los resultados son validados por el mismísimo **Sasian**. La decisión final es absoluta e inapelable.")
+
+    # --- MANUAL DEL PILOTO Y FAQ ---
+    elif menu == "📘 Manual del Piloto":
+        st.header("🏎️ Manual del Piloto: SasianGP 2026")
+        st.write("Bienvenido al Paddock. Esta aplicación está diseñada para medir tu conocimiento (y tu suerte) en la Fórmula 1. Aquí te explicamos cómo funcionan los tableros de tu monoplaza.")
+        
+        st.markdown("---")
+        st.subheader("🎛️ Instrucciones Rápidas por Módulo")
+        
+        with st.expander("1. 📝 Hacer Apuesta (Tus Pits)"):
+            st.markdown("""
+            Aquí es donde configuras tu auto para el fin de semana.
+            * **Selecciona el GP:** Elige la carrera en turno.
+            * **Llena tu pronóstico:** Selecciona a los pilotos para la Calificación (Q1, Q2, Q3), la Carrera (P1, P2, P3), y si es fin de semana especial, la Carrera Sprint.
+            * **Bonos:** Acierta la Vuelta Rápida (VR) y el Piloto del Día (PD).
+            * **El Riesgo (Abandono):** Puedes apostar quién será el primero en chocar o romper el motor. Es opcional, pero da muchos puntos (o te los quita).
+            * **Sellar Apuesta:** Dale clic al botón y espera a que el semáforo cambie a verde para confirmar que tu telemetría se guardó.
+            """)
+        
+        with st.expander("2. 🏆 El Paddock"):
+            st.write("La tabla de posiciones general. Aquí verás el Campeonato Mundial en tiempo real para la liga en la que estás activo. Revisa quién va liderando y quién se está quedando rezagado.")
+            
+        with st.expander("3. 📊 Paddock Detallado (Telemetría)"):
+            st.markdown("""
+            El escáner a fondo de cada carrera. 
+            * Selecciona un Gran Premio específico para ver exactamente qué piloto apostó cada quién.
+            * **Código de colores:** Sabrás al instante por qué ganaste o perdiste puntos. Verde (+3 acierto exacto), Amarillo (+1 acierto desordenado), Rojo (0 fallaste), Dorado (+5 acierto Salado) y Gris (-2 fallaste el Salado).
+            """)
+            
+        with st.expander("4. 📖 Reglamento Oficial"):
+            st.write("Las reglas inquebrantables de la FIA (dictadas por el Comisario Sasian). Échale un ojo para entender a detalle cuántos puntos da cada sección y cómo funciona el bloqueo de apuestas.")
+            
+        with st.expander("5. 🛡️ Administrar mis Campeonatos (Solo Creadores)"):
+            st.write("Si tú creaste un campeonato privado, tú eres el cadenero. Aquí te aparecerán las solicitudes de tus amigos que quieren entrar a tu liga. Tienes el poder absoluto de **Aprobarlos** o **Rechazarlos**.")
+
+        st.markdown("---")
+        st.subheader("❓ Preguntas Frecuentes (FAQ)")
+        
+        st.markdown("**1. ¿Hasta qué día y hora puedo meter o cambiar mi pronóstico?**")
+        st.info("Por la sagrada **'Regla Farí'**, los Pits se cierran automáticamente todos los **JUEVES a las 23:59 hrs (Hora de la CDMX)** de la semana de carrera. Después de esa hora, entra el Parque Cerrado y el sistema bloquea cualquier intento de apuesta o modificación.")
+        
+        st.markdown("**2. ¿Me salí a contestar un WhatsApp y al regresar a la app me sacó. ¿Perdí todo?**")
+        st.success("¡Tranquilo! La app tiene un 'Llavero Virtual'. Si te sales de la pantalla por unos minutos para revisar otra cosa, al regresar tu sesión seguirá abierta exactamente donde la dejaste.")
+        
+        st.markdown("**3. Olvidé mi contraseña secreta, ¿qué hago?**")
+        st.success("Cierra sesión (o abre la app en modo incógnito). En la pantalla de acceso busca la pestaña **'🆘 Olvidé mi Clave'**. Pon el alias con el que corres, dale al botón, y Dirección de Carrera te mandará tu contraseña al correo electrónico con el que te registraste.")
+        
+        st.markdown("**4. ¿Puedo estar en varios campeonatos a la vez?**")
+        st.success("¡Sí! En tu menú lateral tienes un botón de **'➕ Unirme a otro'**. Puedes mandar solicitud para unirte a ligas de otros amigos. Cuando vayas a hacer tu apuesta, hay una casilla que te permite aplicar ese mismo pronóstico a todas tus ligas al mismo tiempo.")
+        
+        st.markdown("**5. Me acabo de registrar pero me sale un error de 'Sala de Espera'.**")
+        st.warning("Es normal. Cuando firmas contrato para unirte a una liga ya existente, tu acceso se queda en 'Pendiente'. Tienes que avisarle al creador de ese campeonato para que entre a su módulo de Administración y te acepte en el Paddock.")
+        
+        st.markdown("**6. ¿Qué es la apuesta de 'Abandono' o 'Salado'?**")
+        st.warning("Es de alto riesgo. Tratas de adivinar quién será el primer piloto en abandonar la carrera.\n* ✅ Si aciertas, ganas **+5 puntos** directos.\n* ❌ Si fallas, te penalizan con **-2 puntos**.\n* *Tip:* Puedes dejarlo en 'Ninguno' si no quieres arriesgarte.")
+        
+        st.markdown("**7. La app me sacó una 'Bandera Negra' al intentar guardar mi apuesta, ¿por qué?**")
+        st.error("Seguramente pusiste al mismo piloto dos veces en la misma sección (ej. a Verstappen en P1 y también en P2). Revisa que no tengas nombres repetidos en tus podios; la app no te dejará avanzar hasta que lo corrijas.")
 
     elif menu == "👑 Admin FIA":
         st.header("📢 Pizarra de Dirección de Carrera")
