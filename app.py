@@ -31,6 +31,36 @@ st.markdown(
     </head>
     """,
     unsafe_allow_html=True
+    
+# --- SISTEMA DE MENSAJES GLOBALES (ANIMADO) ---
+    df_msg = fetch_data_mensajes()
+    if not df_msg.empty:
+        msg_texto = str(df_msg.iloc[0].get('Aviso', '')).strip()
+        msg_tipo = str(df_msg.iloc[0].get('Tipo', 'Informativo')).strip()
+        
+        if msg_texto and msg_texto != "nan":
+            # Diccionario de colores estilo F1
+            colores = {
+                "Crítico": "background-color: #E10600; color: white;", # Rojo F1
+                "Alerta": "background-color: #FFC107; color: black;", # Amarillo bandera
+                "Éxito": "background-color: #00e676; color: black;",  # Verde
+                "Informativo": "background-color: #2196F3; color: white;" # Azul
+            }
+            iconos = {"Crítico": "🚨", "Alerta": "🟡", "Éxito": "🟢", "Informativo": "🔵"}
+            
+            estilo = colores.get(msg_tipo, colores["Informativo"])
+            icono = iconos.get(msg_tipo, iconos["Informativo"])
+            
+            # El cintillo animado que cruza la pantalla
+            html_ticker = f"""
+            <div style="{estilo} padding: 10px; border-radius: 8px; font-weight: bold; font-size: 1.2rem; margin-bottom: 15px; border: 1px solid #444;">
+                <marquee behavior="scroll" direction="left" scrollamount="10">
+                    {icono} <strong>DIRECCIÓN DE CARRERA:</strong> {msg_texto} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {icono} <strong>DIRECCIÓN DE CARRERA:</strong> {msg_texto}
+                </marquee>
+            </div>
+            """
+            st.markdown(html_ticker, unsafe_allow_html=True)
+    
 )
 # --- 2. CONEXIÓN A BASE DE DATOS (ANTICOLAPSO V2) ---
 @st.cache_resource
