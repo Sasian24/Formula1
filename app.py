@@ -346,7 +346,7 @@ else:
                 st.error("❌ Datos no encontrados.")
 
         st.markdown("---")
-        opciones_nav = ["📝 Hacer Apuesta", "🏆 El Paddock", "📊 Paddock Detallado", "📖 Reglamento Oficial", "📘 Manual del Piloto"]
+        opciones_nav = ["🏆 El Paddock", "📊 Paddock Detallado", "📝 Hacer Apuesta", "📖 Reglamento Oficial", "📘 Manual del Piloto"]
         if mis_campeonatos_admin: opciones_nav.append("🛡️ Administrar mis Campeonatos")
         if es_admin_fia: opciones_nav.append("👑 Admin FIA")
         
