@@ -623,11 +623,11 @@ else:
                                             else:
                                                 inner_html = val
                                 elif "Pts" in col:
-                                try:
-                                    puntos_num = int(float(val))
-                                except:
-                                    puntos_num = 0
-                                inner_html = f'<span style="font-weight: bold; font-size: 1.1rem;">{puntos_num}</span>'
+                                    try:
+                                        puntos_num = int(float(val))
+                                    except:
+                                        puntos_num = 0
+                                    inner_html = f'<span style="font-weight: bold; font-size: 1.1rem;">{puntos_num}</span>'
                             html_det += f'<td style="padding: 10px; vertical-align: middle; text-align:center;">{inner_html}</td>'
                         html_det += '</tr>'
                     html_det += '</table>'
