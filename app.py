@@ -140,17 +140,26 @@ if 'auto_c3' not in st.session_state: st.session_state['auto_c3'] = None
 params = st.query_params
 if 'piloto' in params and 'llave' in params and st.session_state['usuario_activo'] is None:
     df_j = fetch_data_jugadores()
-    user_match = df_j[(df_j['Nombre'] == params['piloto']) & (df_j['Password'] == params['llave'])]
+    
+    # Blindaje: Forzamos a que tanto el Excel como el Link se lean como Texto puro sin espacios
+    match_nombre = df_j['Nombre'].astype(str).str.strip() == str(params['piloto']).strip()
+    match_pass = df_j['Password'].astype(str).str.strip() == str(params['llave']).strip()
+    
+    user_match = df_j[match_nombre & match_pass]
+    
     if not user_match.empty:
-        st.session_state['usuario_activo'] = params['piloto']
+        piloto_limpio = str(params['piloto']).strip()
+        st.session_state['usuario_activo'] = piloto_limpio
+        
+        # 🍪 Horneamos la galleta automáticamente al usar el link mágico
+        controller.set('SasianGP_Piloto', piloto_limpio, max_age=31536000) 
+        
         campeonatos_usuario = str(user_match.iloc[0].get('Campeonato', '')).strip().split(',')
         st.session_state['campeonato_activo'] = campeonatos_usuario[0].strip() if campeonatos_usuario[0] else "Sin Campeonato"
         st.rerun()
 
 if st.session_state['usuario_activo'] is None:
     tab1, tab2, tab3 = st.tabs(["🔐 Acceso", "📝 Registrarse", "🆘 Olvidé mi Clave"])
-
-    
     with tab1:
         u = st.text_input("Alias de Piloto:", key="l_u")
         p = st.text_input("Contraseña:", type="password", key="l_p")
