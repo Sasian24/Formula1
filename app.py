@@ -848,6 +848,13 @@ else:
                     "Victorias": int(c.get('wins', 0))
                 } for c in listas_c[0].get('ConstructorStandings', [])])
                 
+                # 🔧 EL ORDENADOR AUTOMÁTICO: Acomoda por Puntos y Victorias, y reasigna el número de posición correcto.
+                df_pilotos = df_pilotos.sort_values(by=['Puntos', 'Victorias'], ascending=[False, False]).reset_index(drop=True)
+                df_pilotos['Pos'] = df_pilotos.index + 1
+                
+                df_escuderias = df_escuderias.sort_values(by=['Puntos', 'Victorias'], ascending=[False, False]).reset_index(drop=True)
+                df_escuderias['Pos'] = df_escuderias.index + 1
+
                 return df_pilotos, df_escuderias, ""
             except Exception as e:
                 return None, None, f"Error interno en código: {str(e)}"
