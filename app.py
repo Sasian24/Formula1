@@ -11,6 +11,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from streamlit_cookies_controller import CookieController
 import os
+import streamlit.components.v1 as components
 
 # --- 1. CONFIGURACIÓN VISUAL FORZADA ---
 try:
@@ -366,6 +367,22 @@ else:
         if es_admin_fia: opciones_nav.append("👑 Admin FIA")
         
         menu = st.radio("Navegación", opciones_nav)
+        
+        # --- HACK AERODINÁMICO: CERRAR BARRA AL HACER CLIC ---
+        if 'ultimo_menu' not in st.session_state:
+            st.session_state['ultimo_menu'] = menu
+
+        if menu != st.session_state['ultimo_menu']:
+            st.session_state['ultimo_menu'] = menu
+            components.html(
+                """
+                <script>
+                    const closeBtn = window.parent.document.querySelector('[data-testid="baseButton-headerNoPadding"]') || window.parent.document.querySelector('button[aria-label="Close"]');
+                    if(closeBtn) { closeBtn.click(); }
+                </script>
+                """,
+                height=0, width=0
+            )
         
         st.markdown("---")
         if st.button("🚪 Salir de los Pits"):
