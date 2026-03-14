@@ -474,7 +474,7 @@ else:
                             st.rerun()
         else: st.info("No hay solicitudes registradas en la base de datos.")
 
-    # --- MENÚ: EL PADDOCK (CON PODIO DINÁMICO) ---
+    # --- MENÚ: EL PADDOCK (PODIO COMPACTO Y CENTRADO) ---
     elif menu == "🏆 El Paddock":
         st.subheader(f"Clasificación Mundial - Campeonato: {st.session_state['campeonato_activo']}")
         df_q = fetch_data_quinielas()
@@ -497,48 +497,44 @@ else:
                 
             res = res.sort_values('Puntos', ascending=False).reset_index(drop=True)
             
-            # --- 🏆 CÁLCULO DEL PODIO (AGRUPANDO EMPATES) ---
+            # --- 🏆 PODIO ULTRA-COMPACTO Y CENTRADO ---
             if not res.empty:
-                # Calculamos el ranking real tomando en cuenta empates
                 res['Rank'] = res['Puntos'].rank(method='dense', ascending=False).astype(int)
                 
-                def get_nombres_rango(rango):
+                def get_nombres_rank(rango):
                     pilotos = res[res['Rank'] == rango]
-                    if pilotos.empty: return "---", 0
-                    nombres = "<br>".join(pilotos['Piloto'].tolist())
-                    puntos = pilotos.iloc[0]['Puntos']
-                    return nombres, int(puntos)
+                    if pilotos.empty: return "---"
+                    return "<br>".join(pilotos['Piloto'].tolist())
 
-                n1, p1 = get_nombres_rango(1)
-                n2, p2 = get_nombres_rango(2)
-                n3, p3 = get_nombres_rango(3)
-                
+                n1 = get_nombres_rank(1)
+                n2 = get_nombres_rank(2)
+                n3 = get_nombres_rank(3)
                 logo_lider = res[res['Rank'] == 1].iloc[0]['🛡️'] if not res[res['Rank'] == 1].empty else ""
 
+                # Estilo común para centrado absoluto dentro de las cajas
+                style_base = "display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 5px; box-shadow: 2px 2px 10px rgba(0,0,0,0.5);"
+
                 podio_html = f"""
-                <div style="display: flex; justify-content: center; align-items: flex-end; height: 250px; margin-top: 30px; margin-bottom: 40px; font-family: sans-serif;">
-                    <div style="width: 30%; text-align: center; background: linear-gradient(to top, #2e2e3e, #444); border-top: 4px solid silver; border-radius: 8px 8px 0 0; padding: 15px 5px; height: 75%; box-shadow: 2px 2px 10px rgba(0,0,0,0.5); z-index: 1;">
-                        <h3 style="margin:0; color: white; font-size: 1.5rem;">🥈 2do</h3>
-                        <h4 style="margin:10px 0; color: silver; font-size: 1.2rem;">{n2}</h4>
-                        <p style="margin:0; color: #aaa; font-weight: bold;">{p2} pts</p>
+                <div style="display: flex; justify-content: center; align-items: flex-end; height: 180px; margin-top: 20px; margin-bottom: 25px; font-family: sans-serif;">
+                    <div style="width: 30%; background: linear-gradient(to top, #2e2e3e, #444); border-top: 4px solid silver; border-radius: 8px 8px 0 0; height: 75%; z-index: 1; {style_base}">
+                        <h3 style="margin:0; color: white; font-size: 1.2rem;">🥈 2do</h3>
+                        <h4 style="margin:5px 0 0 0; color: silver; font-size: 1.0rem;">{n2}</h4>
                     </div>
-                    <div style="width: 35%; text-align: center; background: linear-gradient(to top, #E10600, #ff4b4b); border-top: 5px solid gold; border-radius: 8px 8px 0 0; padding: 20px 5px; height: 100%; margin: 0 -10px; box-shadow: 0 0 20px rgba(225,6,0,0.6); z-index: 2;">
-                        <img src="{logo_lider}" width="50" style="margin-bottom: 10px;">
-                        <h2 style="margin:0; color: white; font-size: 2rem;">🥇 1er</h2>
-                        <h3 style="margin:10px 0; color: gold; font-size: 1.5rem; text-transform: uppercase;">{n1}</h3>
-                        <p style="margin:0; color: white; font-weight: bold; font-size: 1.2rem;">{p1} pts</p>
+                    <div style="width: 35%; background: linear-gradient(to top, #E10600, #ff4b4b); border-top: 5px solid gold; border-radius: 8px 8px 0 0; height: 100%; margin: 0 -10px; box-shadow: 0 0 20px rgba(225,6,0,0.6); z-index: 2; {style_base}">
+                        <img src="{logo_lider}" width="40" style="margin-bottom: 5px;">
+                        <h2 style="margin:0; color: white; font-size: 1.5rem;">🥇 1er</h2>
+                        <h3 style="margin:5px 0 0 0; color: gold; font-size: 1.2rem; text-transform: uppercase;">{n1}</h3>
                     </div>
-                    <div style="width: 30%; text-align: center; background: linear-gradient(to top, #1e1e2e, #333); border-top: 4px solid #cd7f32; border-radius: 8px 8px 0 0; padding: 10px 5px; height: 55%; box-shadow: -2px 2px 10px rgba(0,0,0,0.5); z-index: 1;">
-                        <h3 style="margin:0; color: white; font-size: 1.3rem;">🥉 3er</h3>
-                        <h4 style="margin:10px 0; color: #cd7f32; font-size: 1.1rem;">{n3}</h4>
-                        <p style="margin:0; color: #aaa; font-weight: bold;">{p3} pts</p>
+                    <div style="width: 30%; background: linear-gradient(to top, #1e1e2e, #333); border-top: 4px solid #cd7f32; border-radius: 8px 8px 0 0; height: 55%; z-index: 1; {style_base}">
+                        <h3 style="margin:0; color: white; font-size: 1.1rem;">🥉 3er</h3>
+                        <h4 style="margin:5px 0 0 0; color: #cd7f32; font-size: 0.9rem;">{n3}</h4>
                     </div>
                 </div>
                 """
                 st.markdown(podio_html, unsafe_allow_html=True)
             # --- FIN PODIO ---
 
-            # Tabla General Abajo
+            # Tabla General Abajo (Mantenida)
             html_table = '<table style="width:100%; border-collapse: collapse; font-family: sans-serif;">'
             html_table += '<thead><tr style="background-color: #2e2e3e; color: white;">'
             html_table += '<th style="text-align:center; padding: 12px; border-bottom: 2px solid #E10600;">Pos</th>'
