@@ -600,17 +600,28 @@ else:
                                 elif r_of:
                                     base = col.split('<br>')[0]
                                     if val not in ["", "nan", "None", "🔒 CERRADO"]:
+                                        real = r_of.get(base, '')
+                                        p1_real = r_of.get('P1', '')
+                                        
                                         if base == 'Salado':
-                                            real = r_of.get('Salado', '')
-                                            if val == real and real != "": inner_html = f'<span style="color: #FFD700; font-weight: bold; text-shadow: 1px 1px 2px #000;">{val}</span>'
-                                            else: inner_html = f'<span style="color: gray; font-weight: bold;">{val}</span>'
-                                        elif base in r_of:
-                                            real = r_of[base]
-                                            if val == real: inner_html = f'<span style="color: #00e676; font-weight: bold;">{val}</span>'
-                                            elif base in ['P1','P2','P3', 'S1', 'S2', 'S3'] and val in [r_of.get(base[0]+'1'), r_of.get(base[0]+'2'), r_of.get(base[0]+'3')]: inner_html = f'<span style="color: #ffb300; font-weight: bold;">{val}</span>'
-                                            elif base in ['Q1','Q2','Q3'] and val in [r_of.get('Q1'), r_of.get('Q2'), r_of.get('Q3')]: inner_html = f'<span style="color: #ffb300; font-weight: bold;">{val}</span>'
-                                            else: inner_html = f'<span style="color: #ff5252; font-weight: bold;">{val}</span>'
-                            elif "Pts" in col:
+                                            if val == real and real != "": 
+                                                inner_html = f'<span style="color: #FFD700; font-weight: bold; text-shadow: 1px 1px 2px #000;">{val}</span>'
+                                            elif real != "" or p1_real != "": 
+                                                inner_html = f'<span style="color: gray; font-weight: bold;">{val}</span>'
+                                            else: 
+                                                inner_html = val 
+                                        else:
+                                            if real != "":
+                                                if val == real: 
+                                                    inner_html = f'<span style="color: #00e676; font-weight: bold;">{val}</span>'
+                                                elif base in ['P1','P2','P3', 'S1', 'S2', 'S3'] and val in [r_of.get(base[0]+'1'), r_of.get(base[0]+'2'), r_of.get(base[0]+'3')]: 
+                                                    inner_html = f'<span style="color: #ffb300; font-weight: bold;">{val}</span>'
+                                                elif base in ['Q1','Q2','Q3'] and val in [r_of.get('Q1'), r_of.get('Q2'), r_of.get('Q3')]: 
+                                                    inner_html = f'<span style="color: #ffb300; font-weight: bold;">{val}</span>'
+                                                else: 
+                                                    inner_html = f'<span style="color: #ff5252; font-weight: bold;">{val}</span>'
+                                            else:
+                                                inner_html = val
                                 inner_html = f'<span style="font-weight: bold; font-size: 1.1rem;">{int(float(val)) if val != "" else 0}</span>'
                             html_det += f'<td style="padding: 10px; vertical-align: middle; text-align:center;">{inner_html}</td>'
                         html_det += '</tr>'
@@ -987,10 +998,17 @@ else:
                             
                             if str(row.get('Vuelta_Rapida','')) == v_rvr and v_rvr != "": p += 2
                             if str(row.get('Piloto_Del_Dia','')) == v_rpd and v_rpd != "": p += 2
+                            
                             v_ab_jugador = str(row.get('Primer_Abandono',''))
                             if v_ab_jugador != "" and v_ab_jugador != "🔒 CERRADO":
-                                if v_abr and v_ab_jugador == v_abr: p += 5
-                                else: p -= 2
+                                # 🔧 ARREGLO DEL SALADO: Solo penalizamos si hay un accidente registrado (v_abr), 
+                                # o si ya hay un ganador de la carrera (v_rg1) y nadie chocó.
+                                if v_abr != "": 
+                                    if v_ab_jugador == v_abr: p += 5
+                                    else: p -= 2
+                                elif v_rg1 != "": 
+                                    p -= 2
+                                # Si ambos están vacíos, la carrera no ha pasado, no se suma ni se resta nada.
                                 
                             celdas.append(gspread.Cell(row=i+2, col=col_pts_idx, value=p))
                     
