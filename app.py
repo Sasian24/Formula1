@@ -474,61 +474,32 @@ else:
                             st.rerun()
         else: st.info("No hay solicitudes registradas en la base de datos.")
 
-    # --- MENÚ: EL PADDOCK (PODIO COMPACTO Y CENTRADO) ---
-    elif menu == "🏆 El Paddock":
-        st.subheader(f"Clasificación Mundial - Campeonato: {st.session_state['campeonato_activo']}")
-        df_q = fetch_data_quinielas()
-        df_j = fetch_data_jugadores()
-        
-        if not df_q.empty and 'Campeonato' in df_q.columns:
-            df_q.columns = [str(c).strip() for c in df_q.columns]
-            df_q = df_q[df_q['Campeonato'].astype(str).str.strip() == st.session_state['campeonato_activo']]
-            df_q['Puntos_Totales'] = pd.to_numeric(df_q.get('Puntos_Totales', 0), errors='coerce').fillna(0)
-            res = df_q.groupby('Jugador')['Puntos_Totales'].sum().reset_index()
-            
-            if not df_j.empty:
-                res = res.merge(df_j[['Nombre', 'Escuderia_Favorita']], left_on='Jugador', right_on='Nombre', how='left')
-                res['🛡️'] = res['Escuderia_Favorita'].str.lower().str.strip().map(url_logos).fillna(url_logos["cadillac"])
-                res = res.rename(columns={'Jugador': 'Piloto', 'Escuderia_Favorita': 'Escudería', 'Puntos_Totales': 'Puntos'})
-                res = res[['🛡️', 'Piloto', 'Escudería', 'Puntos']]
-            else: 
-                res = res.rename(columns={'Jugador': 'Piloto', 'Puntos_Totales': 'Puntos'})
-                res['🛡️'] = url_logos["cadillac"]
-                
-            res = res.sort_values('Puntos', ascending=False).reset_index(drop=True)
-            
-            # --- 🏆 PODIO ULTRA-COMPACTO Y CENTRADO ---
-            if not res.empty:
-                res['Rank'] = res['Puntos'].rank(method='dense', ascending=False).astype(int)
-                
-                def get_nombres_rank(rango):
-                    pilotos = res[res['Rank'] == rango]
-                    if pilotos.empty: return "---"
-                    return "<br>".join(pilotos['Piloto'].tolist())
-
-                n1 = get_nombres_rank(1)
-                n2 = get_nombres_rank(2)
-                n3 = get_nombres_rank(3)
-                logo_lider = res[res['Rank'] == 1].iloc[0]['🛡️'] if not res[res['Rank'] == 1].empty else ""
-
-                # Estilo común para centrado absoluto dentro de las cajas
-                style_base = "display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 5px; box-shadow: 2px 2px 10px rgba(0,0,0,0.5);"
-
+    # --- 🏆 PODIO ULTRA-COMPACTO Y CENTRADO ABSOLUTO ---
                 podio_html = f"""
                 <div style="display: flex; justify-content: center; align-items: flex-end; height: 180px; margin-top: 20px; margin-bottom: 25px; font-family: sans-serif;">
-                    <div style="width: 30%; background: linear-gradient(to top, #2e2e3e, #444); border-top: 4px solid silver; border-radius: 8px 8px 0 0; height: 75%; z-index: 1; {style_base}">
-                        <h3 style="margin:0; color: white; font-size: 1.2rem;">🥈 2do</h3>
-                        <h4 style="margin:5px 0 0 0; color: silver; font-size: 1.0rem;">{n2}</h4>
+                    
+                    <div style="width: 30%; background: linear-gradient(to top, #2e2e3e, #444); border-top: 4px solid silver; border-radius: 8px 8px 0 0; height: 75%; z-index: 1; text-align: center; box-sizing: border-box; padding-top: 35px; box-shadow: 2px 2px 10px rgba(0,0,0,0.5);">
+                        <div style="width: 100%; text-align: center; display: block;">
+                            <h3 style="margin: 0; color: white; font-size: 1.2rem; text-align: center;">🥈 2do</h3>
+                            <h4 style="margin: 5px 0 0 0; color: silver; font-size: 1.0rem; text-align: center; line-height: 1.4;">{n2}</h4>
+                        </div>
                     </div>
-                    <div style="width: 35%; background: linear-gradient(to top, #E10600, #ff4b4b); border-top: 5px solid gold; border-radius: 8px 8px 0 0; height: 100%; margin: 0 -10px; box-shadow: 0 0 20px rgba(225,6,0,0.6); z-index: 2; {style_base}">
-                        <img src="{logo_lider}" width="40" style="margin-bottom: 5px;">
-                        <h2 style="margin:0; color: white; font-size: 1.5rem;">🥇 1er</h2>
-                        <h3 style="margin:5px 0 0 0; color: gold; font-size: 1.2rem; text-transform: uppercase;">{n1}</h3>
+                    
+                    <div style="width: 35%; background: linear-gradient(to top, #E10600, #ff4b4b); border-top: 5px solid gold; border-radius: 8px 8px 0 0; height: 100%; margin: 0 -10px; box-shadow: 0 0 20px rgba(225,6,0,0.6); z-index: 2; text-align: center; box-sizing: border-box; padding-top: 30px;">
+                        <div style="width: 100%; text-align: center; display: block;">
+                            <img src="{logo_lider}" width="40" style="margin: 0 auto 5px auto; display: block;">
+                            <h2 style="margin: 0; color: white; font-size: 1.5rem; text-align: center;">🥇 1er</h2>
+                            <h3 style="margin: 5px 0 0 0; color: gold; font-size: 1.2rem; text-transform: uppercase; text-align: center; line-height: 1.4;">{n1}</h3>
+                        </div>
                     </div>
-                    <div style="width: 30%; background: linear-gradient(to top, #1e1e2e, #333); border-top: 4px solid #cd7f32; border-radius: 8px 8px 0 0; height: 55%; z-index: 1; {style_base}">
-                        <h3 style="margin:0; color: white; font-size: 1.1rem;">🥉 3er</h3>
-                        <h4 style="margin:5px 0 0 0; color: #cd7f32; font-size: 0.9rem;">{n3}</h4>
+                    
+                    <div style="width: 30%; background: linear-gradient(to top, #1e1e2e, #333); border-top: 4px solid #cd7f32; border-radius: 8px 8px 0 0; height: 55%; z-index: 1; text-align: center; box-sizing: border-box; padding-top: 20px; box-shadow: -2px 2px 10px rgba(0,0,0,0.5);">
+                        <div style="width: 100%; text-align: center; display: block;">
+                            <h3 style="margin: 0; color: white; font-size: 1.1rem; text-align: center;">🥉 3er</h3>
+                            <h4 style="margin: 5px 0 0 0; color: #cd7f32; font-size: 0.9rem; text-align: center; line-height: 1.4;">{n3}</h4>
+                        </div>
                     </div>
+                    
                 </div>
                 """
                 st.markdown(podio_html, unsafe_allow_html=True)
