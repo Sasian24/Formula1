@@ -141,18 +141,19 @@ params = st.query_params
 if 'piloto' in params and 'llave' in params and st.session_state['usuario_activo'] is None:
     df_j = fetch_data_jugadores()
     
-    # Blindaje: Forzamos a que tanto el Excel como el Link se lean como Texto puro sin espacios
     match_nombre = df_j['Nombre'].astype(str).str.strip() == str(params['piloto']).strip()
     match_pass = df_j['Password'].astype(str).str.strip() == str(params['llave']).strip()
-    
     user_match = df_j[match_nombre & match_pass]
     
     if not user_match.empty:
         piloto_limpio = str(params['piloto']).strip()
         st.session_state['usuario_activo'] = piloto_limpio
         
-        # 🍪 Horneamos la galleta automáticamente al usar el link mágico
-        controller.set('SasianGP_Piloto', piloto_limpio, max_age=31536000) 
+        # 🛡️ BLINDAJE: Si Safari bloquea las galletas, no explotamos, solo pasamos de largo.
+        try:
+            controller.set('SasianGP_Piloto', piloto_limpio, max_age=31536000) 
+        except Exception:
+            pass
         
         campeonatos_usuario = str(user_match.iloc[0].get('Campeonato', '')).strip().split(',')
         st.session_state['campeonato_activo'] = campeonatos_usuario[0].strip() if campeonatos_usuario[0] else "Sin Campeonato"
@@ -368,11 +369,16 @@ else:
         
         st.markdown("---")
         if st.button("🚪 Salir de los Pits"):
+            # 1. Intentar borrar galleta sin chocar
             try:
-                # En lugar de remove, le ponemos una galleta vacía que muere al instante
-                controller.set('SasianGP_Piloto', '', max_age=0)
-            except:
+                controller.remove('SasianGP_Piloto')
+            except Exception:
                 pass
+            
+            # 2. 🧹 ¡CRUCIAL! Borramos la llave mágica de la barra de arriba
+            st.query_params.clear()
+            
+            # 3. Apagamos el motor
             st.session_state['usuario_activo'] = None
             st.session_state['campeonato_activo'] = None
             st.rerun()
