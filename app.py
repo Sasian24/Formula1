@@ -15,9 +15,9 @@ import os
 # --- 1. CONFIGURACIÓN VISUAL FORZADA ---
 try:
     img_icono = Image.open("icono.jpg")
-    st.set_page_config(page_title="SasianGP 2026 - CAMPEONATOS PRIVADOS", page_icon=img_icono, layout="wide") 
+    st.set_page_config(page_title="SasianGP 2026 - CAMPEONATOS PRIVADOS", page_icon=img_icono, layout="wide", initial_sidebar_state="collapsed") 
 except FileNotFoundError:
-    st.set_page_config(page_title="SasianGP 2026 - CAMPEONATOS PRIVADOS", page_icon="🏎️", layout="wide")
+    st.set_page_config(page_title="SasianGP 2026 - CAMPEONATOS PRIVADOS", page_icon="🏎️", layout="wide", initial_sidebar_state="collapsed")
 
 # --- AQUÍ PRENDEMOS EL HORNO DE GALLETAS ---
 controller = CookieController()
