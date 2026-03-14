@@ -134,8 +134,20 @@ if 'auto_c2' not in st.session_state: st.session_state['auto_c2'] = None
 if 'auto_c3' not in st.session_state: st.session_state['auto_c3'] = None
 
 # --- 5. INTERFAZ DE ACCESO ---
+params = st.query_params
+if 'piloto' in params and 'llave' in params and st.session_state['usuario_activo'] is None:
+    df_j = fetch_data_jugadores()
+    user_match = df_j[(df_j['Nombre'] == params['piloto']) & (df_j['Password'] == params['llave'])]
+    if not user_match.empty:
+        st.session_state['usuario_activo'] = params['piloto']
+        campeonatos_usuario = str(user_match.iloc[0].get('Campeonato', '')).strip().split(',')
+        st.session_state['campeonato_activo'] = campeonatos_usuario[0].strip() if campeonatos_usuario[0] else "Sin Campeonato"
+        st.rerun()
+
 if st.session_state['usuario_activo'] is None:
     tab1, tab2, tab3 = st.tabs(["🔐 Acceso", "📝 Registrarse", "🆘 Olvidé mi Clave"])
+
+    
     with tab1:
         u = st.text_input("Alias de Piloto:", key="l_u")
         p = st.text_input("Contraseña:", type="password", key="l_p")
