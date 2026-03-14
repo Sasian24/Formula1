@@ -818,45 +818,51 @@ else:
         @st.cache_data(ttl=3600)
         def obtener_posiciones_reales():
             try:
-                req_p = requests.get("https://api.jolpi.ca/ergast/f1/current/driverStandings.json").json()
-                listas_p = req_p['MRData']['StandingsTable']['StandingsLists']
+                resp_p = requests.get("https://api.jolpi.ca/ergast/f1/current/driverStandings.json", timeout=10)
+                if resp_p.status_code != 200:
+                    return None, None, f"Error HTTP de la API: {resp_p.status_code}"
                 
-                # Si la temporada no ha empezado, la lista viene vacía
-                if not listas_p: return pd.DataFrame(), pd.DataFrame()
+                req_p = resp_p.json()
+                listas_p = req_p.get('MRData', {}).get('StandingsTable', {}).get('StandingsLists', [])
+                if not listas_p: return pd.DataFrame(), pd.DataFrame(), ""
                 
                 df_pilotos = pd.DataFrame([{
-                    "Pos": int(d['position']),
-                    "Piloto": f"{d['Driver']['givenName']} {d['Driver']['familyName']}",
-                    "Escudería": d['Constructors'][0]['name'],
-                    "Puntos": float(d['points']),
-                    "Victorias": int(d['wins'])
-                } for d in listas_p[0]['DriverStandings']])
+                    "Pos": int(d.get('position', 0)),
+                    "Piloto": f"{d.get('Driver',{}).get('givenName','')} {d.get('Driver',{}).get('familyName','')}",
+                    "Escudería": d.get('Constructors',[{}])[0].get('name',''),
+                    "Puntos": float(d.get('points', 0)),
+                    "Victorias": int(d.get('wins', 0))
+                } for d in listas_p[0].get('DriverStandings', [])])
 
-                req_c = requests.get("https://api.jolpi.ca/ergast/f1/current/constructorStandings.json").json()
-                listas_c = req_c['MRData']['StandingsTable']['StandingsLists']
+                resp_c = requests.get("https://api.jolpi.ca/ergast/f1/current/constructorStandings.json", timeout=10)
+                req_c = resp_c.json()
+                listas_c = req_c.get('MRData', {}).get('StandingsTable', {}).get('StandingsLists', [])
                 
                 df_escuderias = pd.DataFrame([{
-                    "Pos": int(c['position']),
-                    "Escudería": c['Constructor']['name'],
-                    "Puntos": float(c['points']),
-                    "Victorias": int(c['wins'])
-                } for c in listas_c[0]['ConstructorStandings']])
+                    "Pos": int(c.get('position', 0)),
+                    "Escudería": c.get('Constructor',{}).get('name',''),
+                    "Puntos": float(c.get('points', 0)),
+                    "Victorias": int(c.get('wins', 0))
+                } for c in listas_c[0].get('ConstructorStandings', [])])
                 
-                return df_pilotos, df_escuderias
+                return df_pilotos, df_escuderias, ""
             except Exception as e:
-                return None, None
+                return None, None, f"Error interno en código: {str(e)}"
 
-        df_p_real, df_e_real = obtener_posiciones_reales()
+        df_p_real, df_e_real, error_tecnico = obtener_posiciones_reales()
 
-        if df_p_real is not None:
+        if error_tecnico:
+            st.error(f"❌ Falla de comunicación con los servidores de la FIA.")
+            st.code(f"Diagnóstico para el Mecánico (Sasian): {error_tecnico}")
+        elif df_p_real is not None:
             if df_p_real.empty:
-                st.info("🏁 La temporada actual aún no tiene puntos registrados oficiales de la FIA. La tabla se actualizará tras la primera carrera.")
+                st.info("🏁 La base de datos de la FIA aún no procesa los puntos de esta temporada.")
             else:
                 tab_pil, tab_esc = st.tabs(["🏎️ Campeonato de Pilotos", "🏗️ Campeonato de Constructores"])
                 with tab_pil: st.dataframe(df_p_real, hide_index=True, use_container_width=True)
                 with tab_esc: st.dataframe(df_e_real, hide_index=True, use_container_width=True)
         else:
-            st.error("❌ Falla de comunicación con los servidores de la FIA. Intenta más tarde.")
+            st.error("❌ Falla desconocida.")
     
     # --- REGLAMENTO Y ADMIN FIA ---
     elif menu == "📖 Reglamento Oficial":
