@@ -35,11 +35,9 @@ st.markdown(
 # --- 2. CONEXIÓN A BASE DE DATOS (ANTICOLAPSO V2) ---
 @st.cache_resource
 def init_gspread():
-    # En lugar de buscar un archivo físico, llamamos a la bóveda secreta
     caja_fuerte = st.secrets["gcp_json"]
     cred_dict = json.loads(caja_fuerte)
     
-    # Nos conectamos usando el diccionario, no el archivo
     gc = gspread.service_account_from_dict(cred_dict)
     sh = gc.open("SasianGP_DB")
     return (
@@ -72,7 +70,6 @@ def fetch_data_calendario():
         st.error(f"⚠️ Error al conectar con la pestaña 'Calendario': {e}")
         return pd.DataFrame()
 
-# Cargar el calendario global de inmediato
 df_cal_global = fetch_data_calendario()
 
 @st.cache_data(ttl=60)
@@ -110,7 +107,6 @@ pilotos = sorted([
     "Liam Lawson", "Gabriel Bortoleto"
 ])
 
-df_cal_global = fetch_data_calendario()
 if not df_cal_global.empty: df_cal_global.columns = [str(c).strip() for c in df_cal_global.columns]
 lista_carreras_oficial = df_cal_global['Carrera'].tolist() if not df_cal_global.empty else []
 
@@ -148,7 +144,6 @@ if st.session_state['usuario_activo'] is None:
             user_match = df_j[(df_j['Nombre']==u.strip()) & (df_j['Password']==p.strip())]
             if not user_match.empty:
                 st.session_state['usuario_activo'] = u.strip()
-                # GALLETA PERSISTENTE (DURA 1 AÑO EN EL TELÉFONO)
                 controller.set('SasianGP_Piloto', u.strip(), max_age=31536000) 
                 campeonatos_usuario = str(user_match.iloc[0].get('Campeonato', '')).strip().split(',')
                 st.session_state['campeonato_activo'] = campeonatos_usuario[0].strip() if campeonatos_usuario[0] else "Sin Campeonato"
@@ -280,10 +275,7 @@ else:
                 n_camp_nuevo = st.text_input("Nombre de tu nuevo campeonato:")
                 if st.button("Crear y Entrar"):
                     if n_camp_nuevo:
-                        # 1. Lo agregamos a la lista de administradores
                         tabla_campeonatos_admin.append_row([n_camp_nuevo.strip(), st.session_state['usuario_activo']])
-                        
-                        # 2. Se lo asignamos al jugador activo en su perfil
                         df_j = fetch_data_jugadores()
                         idx_jug = df_j.index[df_j['Nombre'] == st.session_state['usuario_activo']].tolist()
                         if idx_jug:
@@ -291,7 +283,6 @@ else:
                             camp_actual = str(df_j.at[idx_jug[0], 'Campeonato']).strip()
                             camp_final = f"{camp_actual}, {n_camp_nuevo.strip()}" if camp_actual and camp_actual != "Sin Campeonato" else n_camp_nuevo.strip()
                             tabla_jugadores.update_cell(f_jug, 10, camp_final)
-                        
                         st.cache_data.clear()
                         st.session_state['campeonato_activo'] = n_camp_nuevo.strip()
                         st.success(f"✅ ¡Campeonato '{n_camp_nuevo}' creado! Eres el Comisario oficial.")
@@ -300,7 +291,6 @@ else:
                     else:
                         st.warning("⚠️ Necesitas escribir un nombre para el campeonato.")
 
-        # --- AQUÍ ESTÁ EL PERFIL PERFECTAMENTE ALINEADO ---
         with st.expander("👤 Editar Mi Perfil"):
             df_j_perfil = fetch_data_jugadores()
             match_usr_perfil = df_j_perfil[df_j_perfil['Nombre'] == st.session_state['usuario_activo']]
@@ -622,12 +612,12 @@ else:
                                                     inner_html = f'<span style="color: #ff5252; font-weight: bold;">{val}</span>'
                                             else:
                                                 inner_html = val
-                                elif "Pts" in col:
-                                    try:
-                                        puntos_num = int(float(val))
-                                    except:
-                                        puntos_num = 0
-                                    inner_html = f'<span style="font-weight: bold; font-size: 1.1rem;">{puntos_num}</span>'
+                            elif "Pts" in col:
+                                try:
+                                    puntos_num = int(float(val))
+                                except:
+                                    puntos_num = 0
+                                inner_html = f'<span style="font-weight: bold; font-size: 1.1rem;">{puntos_num}</span>'
                             html_det += f'<td style="padding: 10px; vertical-align: middle; text-align:center;">{inner_html}</td>'
                         html_det += '</tr>'
                     html_det += '</table>'
@@ -964,10 +954,18 @@ else:
             with b3: abr = st.selectbox("Abandono:", pilotos, index=get_idx_res('rab'), placeholder="Ninguno")
             
             if st.form_submit_button("⚖️ Repartir Puntos"):
-                v_rq1, v_rq2, v_rq3 = rq1 if rq1 else "", rq2 if rq2 else "", rq3 if rq3 else ""
-                v_rs1, v_rs2, v_rs3 = rs1 if rs1 else "", rs2 if rs2 else "", rs3 if rs3 else ""
-                v_rg1, v_rg2, v_rg3 = rg1 if rg1 else "", rg2 if rg2 else "", rg3 if rg3 else ""
-                v_rvr, v_rpd, v_abr = rvr if rvr else "", rpd if rpd else "", abr if abr else ""
+                v_rq1 = rq1 if rq1 else ""
+                v_rq2 = rq2 if rq2 else ""
+                v_rq3 = rq3 if rq3 else ""
+                v_rs1 = rs1 if rs1 else ""
+                v_rs2 = rs2 if rs2 else ""
+                v_rs3 = rs3 if rs3 else ""
+                v_rg1 = rg1 if rg1 else ""
+                v_rg2 = rg2 if rg2 else ""
+                v_rg3 = rg3 if rg3 else ""
+                v_rvr = rvr if rvr else ""
+                v_rpd = rpd if rpd else ""
+                v_abr = abr if abr else ""
 
                 tabla_resultados.append_row([sel_car, v_rq1, v_rq2, v_rq3, v_rs1, v_rs2, v_rs3, v_rg1, v_rg2, v_rg3, v_rvr, v_rpd, v_abr])
                 st.cache_data.clear()
@@ -1004,16 +1002,14 @@ else:
                             if str(row.get('Vuelta_Rapida','')) == v_rvr and v_rvr != "": p += 2
                             if str(row.get('Piloto_Del_Dia','')) == v_rpd and v_rpd != "": p += 2
                             
-                            v_ab_jugador = str(row.get('Primer_Abandono',''))
-                            if v_ab_jugador != "" and v_ab_jugador != "🔒 CERRADO":
-                                # 🔧 ARREGLO DEL SALADO: Solo penalizamos si hay un accidente registrado (v_abr), 
-                                # o si ya hay un ganador de la carrera (v_rg1) y nadie chocó.
-                                if v_abr != "": 
+                            # 🔧 EL BLINDAJE PERFECTO DEL SALADO
+                            v_ab_jugador = str(row.get('Primer_Abandono','')).strip()
+                            if v_ab_jugador and v_ab_jugador != "🔒 CERRADO" and v_ab_jugador.lower() != "ninguno":
+                                if v_abr: 
                                     if v_ab_jugador == v_abr: p += 5
                                     else: p -= 2
-                                elif v_rg1 != "": 
+                                elif v_rg1: 
                                     p -= 2
-                                # Si ambos están vacíos, la carrera no ha pasado, no se suma ni se resta nada.
                                 
                             celdas.append(gspread.Cell(row=i+2, col=col_pts_idx, value=p))
                     
