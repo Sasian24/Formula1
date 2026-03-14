@@ -803,29 +803,32 @@ else:
         st.header("🌍 Estado Actual del Campeonato Mundial F1 (Oficial)")
         st.write("Telemetría directa de la FIA con las posiciones reales y oficiales de la temporada actual.")
 
-        @st.cache_data(ttl=3600) # Guarda los datos por 1 hora para no saturar la API
+        @st.cache_data(ttl=3600)
         def obtener_posiciones_reales():
             try:
-                # API de Pilotos
                 req_p = requests.get("https://api.jolpi.ca/ergast/f1/current/driverStandings.json").json()
-                lista_p = req_p['MRData']['StandingsTable']['StandingsLists'][0]['DriverStandings']
+                listas_p = req_p['MRData']['StandingsTable']['StandingsLists']
+                
+                # Si la temporada no ha empezado, la lista viene vacía
+                if not listas_p: return pd.DataFrame(), pd.DataFrame()
+                
                 df_pilotos = pd.DataFrame([{
                     "Pos": int(d['position']),
                     "Piloto": f"{d['Driver']['givenName']} {d['Driver']['familyName']}",
                     "Escudería": d['Constructors'][0]['name'],
                     "Puntos": float(d['points']),
                     "Victorias": int(d['wins'])
-                } for d in lista_p])
+                } for d in listas_p[0]['DriverStandings']])
 
-                # API de Constructores
                 req_c = requests.get("https://api.jolpi.ca/ergast/f1/current/constructorStandings.json").json()
-                lista_c = req_c['MRData']['StandingsTable']['StandingsLists'][0]['ConstructorStandings']
+                listas_c = req_c['MRData']['StandingsTable']['StandingsLists']
+                
                 df_escuderias = pd.DataFrame([{
                     "Pos": int(c['position']),
                     "Escudería": c['Constructor']['name'],
                     "Puntos": float(c['points']),
                     "Victorias": int(c['wins'])
-                } for c in lista_c])
+                } for c in listas_c[0]['ConstructorStandings']])
                 
                 return df_pilotos, df_escuderias
             except Exception as e:
@@ -834,11 +837,12 @@ else:
         df_p_real, df_e_real = obtener_posiciones_reales()
 
         if df_p_real is not None:
-            tab_pil, tab_esc = st.tabs(["🏎️ Campeonato de Pilotos", "🏗️ Campeonato de Constructores"])
-            with tab_pil:
-                st.dataframe(df_p_real, hide_index=True, use_container_width=True)
-            with tab_esc:
-                st.dataframe(df_e_real, hide_index=True, use_container_width=True)
+            if df_p_real.empty:
+                st.info("🏁 La temporada actual aún no tiene puntos registrados oficiales de la FIA. La tabla se actualizará tras la primera carrera.")
+            else:
+                tab_pil, tab_esc = st.tabs(["🏎️ Campeonato de Pilotos", "🏗️ Campeonato de Constructores"])
+                with tab_pil: st.dataframe(df_p_real, hide_index=True, use_container_width=True)
+                with tab_esc: st.dataframe(df_e_real, hide_index=True, use_container_width=True)
         else:
             st.error("❌ Falla de comunicación con los servidores de la FIA. Intenta más tarde.")
     
