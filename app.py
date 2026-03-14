@@ -369,7 +369,8 @@ else:
         st.markdown("---")
         if st.button("🚪 Salir de los Pits"):
             try:
-                controller.remove('SasianGP_Piloto')
+                # En lugar de remove, le ponemos una galleta vacía que muere al instante
+                controller.set('SasianGP_Piloto', '', max_age=0)
             except:
                 pass
             st.session_state['usuario_activo'] = None
