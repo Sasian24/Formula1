@@ -122,7 +122,10 @@ traductor_api = {
 }
 
 # --- 4. GESTIÓN DE SESIÓN ---
-galleta_usuario = controller.get('SasianGP_Piloto')
+try:
+    galleta_usuario = controller.get('SasianGP_Piloto')
+except:
+    galleta_usuario = None
 
 if galleta_usuario and 'usuario_activo' not in st.session_state:
     st.session_state['usuario_activo'] = galleta_usuario
