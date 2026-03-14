@@ -368,7 +368,10 @@ else:
         
         st.markdown("---")
         if st.button("🚪 Salir de los Pits"):
-            controller.remove('SasianGP_Piloto')
+            try:
+                controller.remove('SasianGP_Piloto')
+            except:
+                pass
             st.session_state['usuario_activo'] = None
             st.session_state['campeonato_activo'] = None
             st.rerun()
