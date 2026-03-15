@@ -368,6 +368,27 @@ else:
         
         menu = st.radio("Navegación", opciones_nav)
         
+        # --- 💨 AERODINÁMICA ACTIVA: AUTO-CERRAR BARRA ---
+        if 'ultimo_menu' not in st.session_state:
+            st.session_state['ultimo_menu'] = menu
+
+        if menu != st.session_state['ultimo_menu']:
+            st.session_state['ultimo_menu'] = menu
+            import streamlit.components.v1 as components
+            components.html(
+                """
+                <script>
+                    // Buscamos el botón de cerrar la barra (la 'X' en celulares)
+                    const closeBtn = window.parent.document.querySelector('[data-testid="baseButton-headerNoPadding"]') || window.parent.document.querySelector('button[aria-label="Close"]');
+                    if(closeBtn) { 
+                        closeBtn.click(); 
+                    }
+                </script>
+                """,
+                height=0, width=0
+            )
+        # -------------------------------------------------
+        
         # --- HACK AERODINÁMICO: CERRAR BARRA AL HACER CLIC ---
         if 'ultimo_menu' not in st.session_state:
             st.session_state['ultimo_menu'] = menu
