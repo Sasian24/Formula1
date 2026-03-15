@@ -612,6 +612,7 @@ else:
                 st.markdown("""
                 <div style="text-align: center; margin: 10px 0px 20px 0px; font-size: 1.1rem; background-color: #1e1e1e; padding: 12px; border-radius: 8px; border: 1px solid #333;">
                     <span style="color: #00e676; font-weight: bold;">Verde +3</span> <span style="color: #666; margin: 0 10px;">|</span> 
+                    <span style="color: #4da6ff; font-weight: bold;">Azul +2</span> <span style="color: #666; margin: 0 10px;">|</span> 
                     <span style="color: #ffb300; font-weight: bold;">Amarillo +1</span> <span style="color: #666; margin: 0 10px;">|</span> 
                     <span style="color: #ff5252; font-weight: bold;">Rojo = 0</span> <span style="color: #666; margin: 0 10px;">|</span> 
                     <span style="color: gray; font-weight: bold;">Gris -2</span> <span style="color: #666; margin: 0 10px;">|</span> 
@@ -713,7 +714,11 @@ else:
                                         else:
                                             if real != "":
                                                 if val == real: 
-                                                    inner_html = f'<span style="color: #00e676; font-weight: bold;">{val}</span>'
+                                                    # 🔍 NUEVO: Separamos VR y PD para pintarlos de Azul
+                                                    if base in ['VR', 'PD']:
+                                                        inner_html = f'<span style="color: #4da6ff; font-weight: bold;">{val}</span>'
+                                                    else:
+                                                        inner_html = f'<span style="color: #00e676; font-weight: bold;">{val}</span>'
                                                 elif base in ['P1','P2','P3', 'S1', 'S2', 'S3'] and val in [r_of.get(base[0]+'1'), r_of.get(base[0]+'2'), r_of.get(base[0]+'3')]: 
                                                     inner_html = f'<span style="color: #ffb300; font-weight: bold;">{val}</span>'
                                                 elif base in ['Q1','Q2','Q3'] and val in [r_of.get('Q1'), r_of.get('Q2'), r_of.get('Q3')]: 
