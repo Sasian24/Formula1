@@ -65,11 +65,24 @@ def fetch_data_calendario():
     try:
         data = tabla_calendario.get_all_values()
         if len(data) > 1:
-            return pd.DataFrame(data[1:], columns=data[0])
+            df = pd.DataFrame(data[1:], columns=data[0])
+            
+            # --- 🛠️ PUNTO 1: BLINDAJE DE TEXTO Y LIMPIEZA DE ESPACIOS ---
+            df = df.astype(str) # Forzamos a que todo sea texto plano
+            df.columns = df.columns.str.strip() # Limpiamos espacios en los títulos de las columnas
+            if 'Carrera' in df.columns:
+                df['Carrera'] = df['Carrera'].str.strip() # Limpiamos espacios invisibles en los nombres
+            for col in df.columns:
+                df[col] = df[col].str.strip() # Limpiamos espacios invisibles en las fechas
+            # -----------------------------------------------------------
+            
+            return df
         return pd.DataFrame()
     except Exception as e:
         st.error(f"⚠️ Error al conectar con la pestaña 'Calendario': {e}")
         return pd.DataFrame()
+
+df_cal_global = fetch_data_calendario()
 
 df_cal_global = fetch_data_calendario()
 
