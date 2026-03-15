@@ -585,10 +585,15 @@ else:
                 html_table += '<th style="text-align:center; padding: 12px; border-bottom: 2px solid #E10600;">Puntos</th>'
                 html_table += '</tr></thead><tbody>'
                 for _, row in res.iterrows():
-                    html_table += '<tr style="border-bottom: 1px solid #444; background-color: transparent;">'
-                    html_table += f'<td style="text-align:center; padding: 10px; vertical-align: middle;">{row["Piloto"]}</td>'
-                    html_table += f'<td style="text-align:center; padding: 10px; vertical-align: middle;">{row.get("Escudería", "")}</td>'
-                    html_table += f'<td style="text-align:center; padding: 10px; vertical-align: middle; font-weight: bold; font-size: 1.1rem;">{int(row["Puntos"])}</td>'
+                    # 🔍 ESCÁNER PARA LA TABLA TOTAL
+                    es_mi_fila = str(row["Piloto"]).strip() == str(st.session_state.get('usuario_activo', '')).strip()
+                    estilo_tr = "border-top: 2px solid #ffd700; border-bottom: 2px solid #ffd700; background-color: rgba(255, 215, 0, 0.15);" if es_mi_fila else "border-bottom: 1px solid #444; background-color: transparent;"
+                    color_tx = "color: #ffd700; font-weight: bold;" if es_mi_fila else ""
+                    
+                    html_table += f'<tr style="{estilo_tr}">'
+                    html_table += f'<td style="text-align:center; padding: 10px; vertical-align: middle; {color_tx}">{row["Piloto"]}</td>'
+                    html_table += f'<td style="text-align:center; padding: 10px; vertical-align: middle; {color_tx}">{row.get("Escudería", "")}</td>'
+                    html_table += f'<td style="text-align:center; padding: 10px; vertical-align: middle; font-weight: bold; font-size: 1.1rem; {color_tx}">{int(row["Puntos"])}</td>'
                     html_table += '</tr>'
                 html_table += '</tbody></table>'
                 st.markdown(html_table, unsafe_allow_html=True)
@@ -668,8 +673,11 @@ else:
                     html_det += '</tr>'
 
                     for _, row in df_mostrar.iterrows():
-                        es_mi_fila = (row['Jugador'] == st.session_state['usuario_activo'])
-                        html_det += '<tr style="border-bottom: 1px solid #444;">'
+                        # 🔍 ESCÁNER PARA LA TABLA DETALLADA DEL GP
+                        es_mi_fila = str(row['Jugador']).strip() == str(st.session_state.get('usuario_activo', '')).strip()
+                        estilo_tr = "border-top: 2px solid #ffd700; border-bottom: 2px solid #ffd700; background-color: rgba(255, 215, 0, 0.15);" if es_mi_fila else "border-bottom: 1px solid #444;"
+                        
+                        html_det += f'<tr style="{estilo_tr}">'
                         for col in df_mostrar.columns:
                             val = str(row[col]).strip() if pd.notna(row[col]) else ""
                             inner_html = val
@@ -709,7 +717,10 @@ else:
                                 except:
                                     puntos_num = 0
                                 inner_html = f'<span style="font-weight: bold; font-size: 1.1rem;">{puntos_num}</span>'
-                            html_det += f'<td style="padding: 10px; vertical-align: middle; text-align:center;">{inner_html}</td>'
+                            
+                            # Aplicamos color dorado al texto si es tu fila y si no tiene ya un color de acierto/falla
+                            color_tx = "color: #ffd700; font-weight: bold;" if es_mi_fila and "<span" not in inner_html else ""
+                            html_det += f'<td style="padding: 10px; vertical-align: middle; text-align:center; {color_tx}">{inner_html}</td>'
                         html_det += '</tr>'
                     html_det += '</table>'
                     st.markdown(html_det, unsafe_allow_html=True)
