@@ -368,7 +368,7 @@ else:
         
         menu = st.radio("Navegación", opciones_nav)
         
-        # --- 💨 AERODINÁMICA ACTIVA: AUTO-CERRAR BARRA ---
+        # --- 💨 AERODINÁMICA ACTIVA V2: AUTO-CERRAR BARRA ---
         if 'ultimo_menu' not in st.session_state:
             st.session_state['ultimo_menu'] = menu
 
@@ -378,11 +378,23 @@ else:
             components.html(
                 """
                 <script>
-                    // Buscamos el botón de cerrar la barra (la 'X' en celulares)
-                    const closeBtn = window.parent.document.querySelector('[data-testid="baseButton-headerNoPadding"]') || window.parent.document.querySelector('button[aria-label="Close"]');
-                    if(closeBtn) { 
-                        closeBtn.click(); 
-                    }
+                    // Le damos 100 milisegundos de respiro para que el botón exista
+                    setTimeout(function() {
+                        const parent = window.parent.document;
+                        
+                        // Buscamos la 'X' oficial de Streamlit para celulares
+                        const closeBtn = parent.querySelector('[data-testid="stSidebarCloseButton"]') || parent.querySelector('button[aria-label="Close"]');
+                        
+                        if(closeBtn) { 
+                            closeBtn.click(); 
+                        } else {
+                            // Plan B: Disparar la tecla ESCAPE de emergencia
+                            const escEvent = new KeyboardEvent('keydown', {
+                                key: 'Escape', code: 'Escape', keyCode: 27, which: 27, bubbles: true
+                            });
+                            parent.dispatchEvent(escEvent);
+                        }
+                    }, 100);
                 </script>
                 """,
                 height=0, width=0
