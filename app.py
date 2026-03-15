@@ -49,10 +49,11 @@ def init_gspread():
         sh.worksheet("Campeonatos_Admin"),
         sh.worksheet("Solicitudes"),
         sh.worksheet("Mensajes"),
+        sh.worksheet("Chat"), # <-- NUEVA PESTAÑA DE CHAT
         sh
     )
 
-tabla_quinielas, tabla_jugadores, tabla_resultados, tabla_calendario, tabla_campeonatos_admin, tabla_solicitudes, tabla_mensajes, sh_completa = init_gspread()
+tabla_quinielas, tabla_jugadores, tabla_resultados, tabla_calendario, tabla_campeonatos_admin, tabla_solicitudes, tabla_mensajes, tabla_chat, sh_completa = init_gspread()
 
 @st.cache_data(ttl=60)
 def fetch_data_jugadores(): return pd.DataFrame(tabla_jugadores.get_all_records())
@@ -84,8 +85,6 @@ def fetch_data_calendario():
 
 df_cal_global = fetch_data_calendario()
 
-df_cal_global = fetch_data_calendario()
-
 @st.cache_data(ttl=60)
 def fetch_vals_resultados(): return tabla_resultados.get_all_values()
 
@@ -97,6 +96,14 @@ def fetch_data_solicitudes(): return pd.DataFrame(tabla_solicitudes.get_all_reco
 
 @st.cache_data(ttl=30)
 def fetch_data_mensajes(): return pd.DataFrame(tabla_mensajes.get_all_records())
+
+# --- FUNCIÓN DE LECTURA PARA EL CHAT ---
+@st.cache_data(ttl=5) # 5 segundos de caché para que se sienta en tiempo real
+def fetch_data_chat(): 
+    try:
+        return pd.DataFrame(tabla_chat.get_all_records())
+    except:
+        return pd.DataFrame()
 
 # --- 3. LOGOS Y PILOTOS ---
 url_logos = {
@@ -375,7 +382,8 @@ else:
                 st.error("❌ Datos no encontrados.")
 
         st.markdown("---")
-        opciones_nav = ["🏆 El Paddock", "📊 Paddock Detallado", "📝 Hacer Apuesta", "🌍 Campeonato Real F1", "📖 Reglamento Oficial", "📘 Manual del Piloto"]
+        # --- NUEVA OPCIÓN DE RADIO PADDOCK EN EL MENÚ ---
+        opciones_nav = ["🏆 El Paddock", "📊 Paddock Detallado", "📝 Hacer Apuesta", "💬 Radio Paddock", "🌍 Campeonato Real F1", "📖 Reglamento Oficial", "📘 Manual del Piloto"]
         if mis_campeonatos_admin: opciones_nav.append("🛡️ Administrar mis Campeonatos")
         if es_admin_fia: opciones_nav.append("👑 Admin FIA")
         
@@ -916,6 +924,45 @@ else:
                     time.sleep(2) 
                     st.rerun()
 
+    # --- 💬 MENÚ: RADIO PADDOCK (NUEVO) ---
+    elif menu == "💬 Radio Paddock":
+        st.header(f"🎙️ Radio Paddock - {st.session_state['campeonato_activo']}")
+        st.write("El canal abierto para discutir la estrategia y quejarte con la Dirección de Carrera.")
+
+        df_chat = fetch_data_chat()
+        
+        # Contenedor deslizable (scroll)
+        chat_container = st.container(height=450)
+
+        with chat_container:
+            if not df_chat.empty and 'Campeonato' in df_chat.columns:
+                # Filtrar mensajes solo del campeonato activo
+                df_chat_camp = df_chat[df_chat['Campeonato'].astype(str).str.strip() == st.session_state['campeonato_activo']]
+                
+                if not df_chat_camp.empty:
+                    for _, row in df_chat_camp.iterrows():
+                        piloto_msg = str(row.get('Piloto', 'Piloto'))
+                        mensaje = str(row.get('Mensaje', ''))
+                        fecha = str(row.get('Fecha', ''))
+                        
+                        es_mio = piloto_msg == st.session_state['usuario_activo']
+                        avatar = "🏎️" if es_mio else "🎧"
+                        
+                        with st.chat_message(piloto_msg, avatar=avatar):
+                            st.markdown(f"**{piloto_msg}** <span style='font-size:0.7rem; color:gray;'>({fecha})</span>", unsafe_allow_html=True)
+                            st.write(mensaje)
+                else:
+                    st.info("Radio en silencio. ¡Abre el canal de comunicaciones!")
+            else:
+                st.info("Radio en silencio. ¡Abre el canal de comunicaciones!")
+
+        # Caja de texto para enviar mensaje
+        if prompt := st.chat_input("Transmite tu mensaje a la parrilla..."):
+            ahora_mx = (datetime.utcnow() - timedelta(hours=6)).strftime("%Y-%m-%d %H:%M:%S")
+            tabla_chat.append_row([ahora_mx, st.session_state['campeonato_activo'], st.session_state['usuario_activo'], prompt])
+            st.cache_data.clear()
+            st.rerun()
+
     # --- MENÚ: CAMPEONATO REAL F1 ---
     elif menu == "🌍 Campeonato Real F1":
         st.header("🌍 Estado Actual del Campeonato Mundial F1 (Oficial)")
@@ -1022,13 +1069,20 @@ else:
             El escáner a fondo de cada carrera. 
             * Selecciona un Gran Premio específico para ver exactamente qué piloto apostó cada quién.
             * **🕵️‍♂️ Modo Anti-Espionaje:** Para evitar copias, los pronósticos de los demás pilotos se mantendrán ocultos como *'🔒 Registrado'* y se revelarán automáticamente al cerrarse los Pits (Jueves 23:59 hrs).
-            * **Código de colores:** Sabrás al instante por qué ganaste o perdiste puntos. Verde (+3 acierto exacto), Amarillo (+1 acierto desordenado), Rojo (0 fallaste), Dorado (+5 acierto Salado) y Gris (-2 fallaste el Salado).
+            * **Código de colores:** Sabrás al instante por qué ganaste o perdiste puntos. Verde (+3 acierto exacto), Azul (+2 acierto extra), Amarillo (+1 acierto desordenado), Rojo (0 fallaste), Dorado (+5 acierto Salado) y Gris (-2 fallaste el Salado).
             """)
             
-        with st.expander("4. 📖 Reglamento Oficial"):
+        with st.expander("4. 💬 Radio Paddock (NUEVO)"):
+            st.markdown("""
+            El canal de radio oficial para comunicarte con los pilotos de tu liga.
+            * **Chat Exclusivo:** Lo que escribes aquí solo lo ven los miembros del campeonato que tienes activo en tu menú lateral.
+            * **Carrilla y Estrategia:** Úsalo para festejar tus victorias, justificar tus abandonos o reclamarle a la Dirección de Carrera.
+            """)
+
+        with st.expander("5. 📖 Reglamento Oficial"):
             st.write("Las reglas inquebrantables de la FIA (dictadas por el Comisario Sasian). Échale un ojo para entender a detalle cuántos puntos da cada sección y cómo funciona el bloqueo de apuestas.")
             
-        with st.expander("5. 🛡️ Administrar mis Campeonatos (Solo Creadores)"):
+        with st.expander("6. 🛡️ Administrar mis Campeonatos (Solo Creadores)"):
             st.write("Si tú creaste un campeonato privado, tú eres el cadenero. Aquí te aparecerán las solicitudes de tus amigos que quieren entrar a tu liga. Tienes el poder absoluto de **Aprobarlos** o **Rechazarlos**.")
 
         st.markdown("---")
