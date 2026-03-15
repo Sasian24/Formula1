@@ -156,6 +156,7 @@ if 'campeonato_activo' not in st.session_state: st.session_state['campeonato_act
 if 'auto_c1' not in st.session_state: st.session_state['auto_c1'] = None
 if 'auto_c2' not in st.session_state: st.session_state['auto_c2'] = None
 if 'auto_c3' not in st.session_state: st.session_state['auto_c3'] = None
+if 'chat_leido' not in st.session_state: st.session_state['chat_leido'] = {} # <-- NUEVA LÍNEA DE MEMORIA
 
 # --- 5. INTERFAZ DE ACCESO ---
 params = st.query_params
@@ -382,12 +383,38 @@ else:
                 st.error("❌ Datos no encontrados.")
 
         st.markdown("---")
-        # --- NUEVA OPCIÓN DE RADIO PADDOCK EN EL MENÚ ---
+        
+        # --- 🚨 ESPACIO PARA LA ALERTA VISUAL ---
+        alerta_radio = st.empty()
+        
         opciones_nav = ["🏆 El Paddock", "📊 Paddock Detallado", "📝 Hacer Apuesta", "💬 Radio Paddock", "🌍 Campeonato Real F1", "📖 Reglamento Oficial", "📘 Manual del Piloto"]
         if mis_campeonatos_admin: opciones_nav.append("🛡️ Administrar mis Campeonatos")
         if es_admin_fia: opciones_nav.append("👑 Admin FIA")
         
         menu = st.radio("Navegación", opciones_nav)
+        
+        # --- 📡 RADAR DE MENSAJES NUEVOS ---
+        df_chat_noti = fetch_data_chat()
+        msgs_camp = 0
+        if not df_chat_noti.empty and 'Campeonato' in df_chat_noti.columns:
+            msgs_camp = len(df_chat_noti[df_chat_noti['Campeonato'].astype(str).str.strip() == st.session_state['campeonato_activo']])
+            
+        # Si el piloto entra al chat, actualizamos su memoria para apagar la alarma
+        if menu == "💬 Radio Paddock":
+            st.session_state['chat_leido'][st.session_state['campeonato_activo']] = msgs_camp
+            
+        leidos = st.session_state['chat_leido'].get(st.session_state['campeonato_activo'], 0)
+        
+        # Si hay más mensajes en la base de datos que los leídos, encendemos la alarma
+        if msgs_camp > leidos:
+            alerta_radio.markdown("""
+            <style>
+            @keyframes parpadeo_radio { 0% {opacity: 1;} 50% {opacity: 0.2;} 100% {opacity: 1;} }
+            .alerta-radio { color: white; background-color: #E10600; padding: 8px; border-radius: 5px; text-align: center; font-weight: bold; animation: parpadeo_radio 1.5s infinite; border: 2px solid gold; margin-bottom: 10px;}
+            </style>
+            <div class="alerta-radio">🚨 ¡Nuevos mensajes de Radio!</div>
+            """, unsafe_allow_html=True)
+        # -----------------------------------
         
         st.markdown("---")
         if st.button("🚪 Salir de los Pits"):
