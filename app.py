@@ -530,7 +530,7 @@ else:
                 import streamlit.components.v1 as components
                 components.html(podio_html, height=210)
                 
-                # --- TABLA GENERAL INFERIOR ---
+                # --- TABLA GENERAL INFERIOR CON ESCÁNER DORADO ---
                 html_table = '<table style="width:100%; border-collapse: collapse; font-family: sans-serif;">'
                 html_table += '<thead><tr style="background-color: #2e2e3e; color: white;">'
                 html_table += '<th style="text-align:center; padding: 12px; border-bottom: 2px solid #E10600;">Pos</th>'
@@ -543,12 +543,23 @@ else:
                 for _, row in res.iterrows():
                     logo_url = row.get('🛡️', '')
                     img_tag = f'<img src="{logo_url}" width="60">' if logo_url else ''
-                    html_table += '<tr style="border-bottom: 1px solid #444; background-color: transparent;">'
-                    html_table += f'<td style="text-align:center; padding: 10px; vertical-align: middle; font-weight: bold; font-size: 1.2rem; color: #aaa;">{row["Rank"]}</td>'
+                    
+                    # 🔍 ESCÁNER PARA RESALTAR MI MONOPLAZA EN EL PADDOCK GENERAL
+                    es_mi_fila = str(row["Piloto"]).strip() == str(st.session_state.get('usuario_activo', '')).strip()
+                    
+                    # Si es el usuario activo, fondo dorado transparente con bordes dorados
+                    estilo_tr = "border-top: 2px solid #ffd700; border-bottom: 2px solid #ffd700; background-color: rgba(255, 215, 0, 0.15);" if es_mi_fila else "border-bottom: 1px solid #444; background-color: transparent;"
+                    
+                    # Letras doradas brillantes para el usuario activo
+                    color_tx = "color: #ffd700;" if es_mi_fila else ""
+                    color_rank = "color: #ffd700;" if es_mi_fila else "color: #aaa;" # Para el número de posición
+                    
+                    html_table += f'<tr style="{estilo_tr}">'
+                    html_table += f'<td style="text-align:center; padding: 10px; vertical-align: middle; font-weight: bold; font-size: 1.2rem; {color_rank}">{row["Rank"]}</td>'
                     html_table += f'<td style="text-align:center; padding: 10px; vertical-align: middle;">{img_tag}</td>'
-                    html_table += f'<td style="text-align:center; padding: 10px; vertical-align: middle; font-weight: bold;">{row["Piloto"]}</td>'
-                    html_table += f'<td style="text-align:center; padding: 10px; vertical-align: middle;">{row.get("Escudería", "")}</td>'
-                    html_table += f'<td style="text-align:center; padding: 10px; vertical-align: middle; font-weight: bold; font-size: 1.2rem;">{int(row["Puntos"])}</td>'
+                    html_table += f'<td style="text-align:center; padding: 10px; vertical-align: middle; font-weight: bold; {color_tx}">{row["Piloto"]}</td>'
+                    html_table += f'<td style="text-align:center; padding: 10px; vertical-align: middle; {color_tx}">{row.get("Escudería", "")}</td>'
+                    html_table += f'<td style="text-align:center; padding: 10px; vertical-align: middle; font-weight: bold; font-size: 1.2rem; {color_tx}">{int(row["Puntos"])}</td>'
                     html_table += '</tr>'
                 
                 html_table += '</tbody></table>'
