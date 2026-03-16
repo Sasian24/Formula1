@@ -393,19 +393,37 @@ else:
         
         menu = st.radio("Navegación", opciones_nav)
         
-        # --- 📡 RADAR DE MENSAJES NUEVOS ---
+        # --- 📡 RADAR DE MENSAJES NUEVOS (VERSIÓN INTELIGENTE) ---
         df_chat_noti = fetch_data_chat()
         msgs_camp = 0
-        if not df_chat_noti.empty and 'Campeonato' in df_chat_noti.columns:
-            msgs_camp = len(df_chat_noti[df_chat_noti['Campeonato'].astype(str).str.strip() == st.session_state['campeonato_activo']])
-            
-        # Si el piloto entra al chat, actualizamos su memoria para apagar la alarma
-        if menu == "💬 Radio Paddock":
-            st.session_state['chat_leido'][st.session_state['campeonato_activo']] = msgs_camp
-            
-        leidos = st.session_state['chat_leido'].get(st.session_state['campeonato_activo'], 0)
+        camp_actual = st.session_state['campeonato_activo']
         
-        # Si hay más mensajes en la base de datos que los leídos, encendemos la alarma
+        if not df_chat_noti.empty and 'Campeonato' in df_chat_noti.columns:
+            df_filtrado = df_chat_noti[df_chat_noti['Campeonato'].astype(str).str.strip() == camp_actual]
+            msgs_camp = len(df_filtrado)
+            
+            # TRUCO 1: Si el último mensaje es tuyo, apagamos el radar automáticamente
+            if msgs_camp > 0 and str(df_filtrado.iloc[-1].get('Piloto', '')).strip() == st.session_state['usuario_activo']:
+                st.session_state['chat_leido'][camp_actual] = msgs_camp
+                
+        # TRUCO 2: Recuperar memoria del celular si acabamos de abrir la app
+        if camp_actual not in st.session_state['chat_leido']:
+            try:
+                memoria = controller.get(f"chat_{camp_actual}")
+                st.session_state['chat_leido'][camp_actual] = int(memoria) if memoria else msgs_camp
+            except:
+                st.session_state['chat_leido'][camp_actual] = msgs_camp
+                
+        # Cuando el piloto entra al chat, guardamos en la sesión y horneamos la galleta
+        if menu == "💬 Radio Paddock":
+            st.session_state['chat_leido'][camp_actual] = msgs_camp
+            try:
+                controller.set(f"chat_{camp_actual}", str(msgs_camp), max_age=31536000)
+            except:
+                pass
+                
+        leidos = st.session_state['chat_leido'].get(camp_actual, msgs_camp)
+        
         if msgs_camp > leidos:
             alerta_radio.markdown("""
             <style>
@@ -414,7 +432,9 @@ else:
             </style>
             <div class="alerta-radio">🚨 ¡Nuevos mensajes de Radio!</div>
             """, unsafe_allow_html=True)
-        # -----------------------------------
+        # -------------------------------------------------------------
+        
+        st.markdown("---")
         
         st.markdown("---")
         if st.button("🚪 Salir de los Pits"):
