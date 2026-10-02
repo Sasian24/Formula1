@@ -13,21 +13,21 @@ from streamlit_cookies_controller import CookieController
 import os
 import streamlit.components.v1 as components
 
-# --- 1. CONFIGURACIÓN VISUAL FORZADA ---
+# 1. CONFIGURACIÓN VISUAL FORZADA
 try:
     img_icono = Image.open("icono.jpg")
-    st.set_page_config(page_title="SasianGP 2026 - CAMPEONATOS PRIVADOS", page_icon=img_icono, layout="wide", initial_sidebar_state="collapsed") 
+    st.set_page_config(page_title="SasianGP 2026 CAMPEONATOS PRIVADOS", page_icon=img_icono, layout="wide", initial_sidebar_state="collapsed")
 except FileNotFoundError:
-    st.set_page_config(page_title="SasianGP 2026 - CAMPEONATOS PRIVADOS", page_icon="🏎️", layout="wide", initial_sidebar_state="collapsed")
+    st.set_page_config(page_title="SasianGP 2026 CAMPEONATOS PRIVADOS", page_icon="", layout="wide", initial_sidebar_state="collapsed")
 
-# --- AQUÍ PRENDEMOS EL HORNO DE GALLETAS ---
+# AQUI PRENDEMOS EL HORNO DE GALLETAS
 controller = CookieController()
 
-# --- TRUCO SUCIO PARA EL IPHONE ---
+# TRUCO SUCIO PARA EL IPHONE
 st.markdown(
     """
     <head>
-        <link rel="apple-touch-icon" href="https://github.com/Sasian24/Formula1/blob/main/icono.png?raw=true">
+    <link rel="apple-touch-icon" href="https://github.com/Sasian24/Formula1/blob/main/icono.png?raw=true">
     </head>
     """,
     unsafe_allow_html=True
@@ -38,7 +38,6 @@ st.markdown(
 def init_gspread():
     caja_fuerte = st.secrets["gcp_json"]
     cred_dict = json.loads(caja_fuerte)
-    
     gc = gspread.service_account_from_dict(cred_dict)
     sh = gc.open("SasianGP_DB")
     return (
@@ -49,17 +48,15 @@ def init_gspread():
         sh.worksheet("Campeonatos_Admin"),
         sh.worksheet("Solicitudes"),
         sh.worksheet("Mensajes"),
-        sh.worksheet("Chat"), # <-- NUEVA PESTAÑA DE CHAT
+        sh.worksheet("Chat"),
         sh
     )
 
 tabla_quinielas, tabla_jugadores, tabla_resultados, tabla_calendario, tabla_campeonatos_admin, tabla_solicitudes, tabla_mensajes, tabla_chat, sh_completa = init_gspread()
 
 @st.cache_data(ttl=60)
-def fetch_data_jugadores(): return pd.DataFrame(tabla_jugadores.get_all_records())
-
-@st.cache_data(ttl=60)
-def fetch_data_quinielas(): return pd.DataFrame(tabla_quinielas.get_all_records())
+def fetch_data_quinielas(): 
+    return pd.DataFrame(tabla_quinielas.get_all_records())
 
 @st.cache_data(ttl=600)
 def fetch_data_calendario():
@@ -67,35 +64,36 @@ def fetch_data_calendario():
         data = tabla_calendario.get_all_values()
         if len(data) > 1:
             df = pd.DataFrame(data[1:], columns=data[0])
-            
-            # --- 🛠️ PUNTO 1: BLINDAJE DE TEXTO Y LIMPIEZA DE ESPACIOS ---
-            df = df.astype(str) # Forzamos a que todo sea texto plano
-            df.columns = df.columns.str.strip() # Limpiamos espacios en los títulos de las columnas
+            # PUNTO 1: BLINDAJE DE TEXTO Y LIMPIEZA DE ESPACIOS
+            df = df.astype(str)
+            df.columns = df.columns.str.strip()
             if 'Carrera' in df.columns:
-                df['Carrera'] = df['Carrera'].str.strip() # Limpiamos espacios invisibles en los nombres
+                df['Carrera'] = df['Carrera'].str.strip()
             for col in df.columns:
-                df[col] = df[col].str.strip() # Limpiamos espacios invisibles en las fechas
-            # -----------------------------------------------------------
-            
+                df[col] = df[col].str.strip()
             return df
         return pd.DataFrame()
     except Exception as e:
-        st.error(f"⚠️ Error al conectar con la pestaña 'Calendario': {e}")
+        st.error(f"Error al conectar con la pestaña 'Calendario': {e}")
         return pd.DataFrame()
 
 df_cal_global = fetch_data_calendario()
 
 @st.cache_data(ttl=60)
-def fetch_vals_resultados(): return tabla_resultados.get_all_values()
+def fetch_vals_resultados(): 
+    return tabla_resultados.get_all_values()
 
 @st.cache_data(ttl=30)
-def fetch_data_campeonatos_admin(): return pd.DataFrame(tabla_campeonatos_admin.get_all_records())
+def fetch_data_campeonatos_admin(): 
+    return pd.DataFrame(tabla_campeonatos_admin.get_all_records())
 
 @st.cache_data(ttl=30)
-def fetch_data_solicitudes(): return pd.DataFrame(tabla_solicitudes.get_all_records())
+def fetch_data_solicitudes(): 
+    return pd.DataFrame(tabla_solicitudes.get_all_records())
 
 @st.cache_data(ttl=30)
-def fetch_data_mensajes(): return pd.DataFrame(tabla_mensajes.get_all_records())
+def fetch_data_mensajes(): 
+    return pd.DataFrame(tabla_mensajes.get_all_records())
 
 # --- FUNCIÓN DE LECTURA PARA EL CHAT ---
 @st.cache_data(ttl=5) # 5 segundos de caché para que se sienta en tiempo real
@@ -120,15 +118,17 @@ url_logos = {
 }
 
 pilotos = sorted([
-    "Checo Pérez", "Max Verstappen", "Charles Leclerc", "Lewis Hamilton", 
-    "Lando Norris", "Oscar Piastri", "George Russell", "Fernando Alonso", 
-    "Carlos Sainz", "Franco Colapinto", "Nico Hülkenberg", "Esteban Ocon", 
-    "Pierre Gasly", "Alex Albon", "Lance Stroll", "Valtteri Bottas",
-    "Arvid Lindblad", "Isack Hadjar", "Kimi Antonelli", "Oliver Bearman", 
+    "Checo Pérez", "Max Verstappen", "Charles Leclerc", "Lewis Hamilton",
+    "Lando Norris", "Oscar Piastri", "George Russell", "Fernando Alonso",
+    "Franco Colapinto", "Nico Hülkenberg", "Esteban Ocon", "Pierre Gasly",
+    "Alex Albon", "Lance Stroll", "Valtteri Bottas", "Carlos Sainz",
+    "Arvid Lindblad", "Isack Hadjar", "Kimi Antonelli", "Oliver Bearman",
     "Liam Lawson", "Gabriel Bortoleto"
 ])
 
-if not df_cal_global.empty: df_cal_global.columns = [str(c).strip() for c in df_cal_global.columns]
+if not df_cal_global.empty:
+    df_cal_global.columns = [str(c).strip() for c in df_cal_global.columns]
+
 lista_carreras_oficial = df_cal_global['Carrera'].tolist() if not df_cal_global.empty else []
 
 traductor_api = {
@@ -150,23 +150,26 @@ except:
 
 if galleta_usuario and 'usuario_activo' not in st.session_state:
     st.session_state['usuario_activo'] = galleta_usuario
-
-if 'usuario_activo' not in st.session_state: st.session_state['usuario_activo'] = None
-if 'campeonato_activo' not in st.session_state: st.session_state['campeonato_activo'] = None
-if 'auto_c1' not in st.session_state: st.session_state['auto_c1'] = None
-if 'auto_c2' not in st.session_state: st.session_state['auto_c2'] = None
-if 'auto_c3' not in st.session_state: st.session_state['auto_c3'] = None
-if 'chat_leido' not in st.session_state: st.session_state['chat_leido'] = {} # <-- NUEVA LÍNEA DE MEMORIA
+if 'usuario_activo' not in st.session_state:
+    st.session_state['usuario_activo'] = None
+if 'campeonato_activo' not in st.session_state:
+    st.session_state['campeonato_activo'] = None
+if 'auto_c1' not in st.session_state:
+    st.session_state['auto_c1'] = None
+if 'auto_c2' not in st.session_state:
+    st.session_state['auto_c2'] = None
+if 'auto_c3' not in st.session_state:
+    st.session_state['auto_c3'] = None
+if 'chat_leido' not in st.session_state:
+    st.session_state['chat_leido'] = {}
 
 # --- 5. INTERFAZ DE ACCESO ---
 params = st.query_params
 if 'piloto' in params and 'llave' in params and st.session_state['usuario_activo'] is None:
     df_j = fetch_data_jugadores()
-    
     match_nombre = df_j['Nombre'].astype(str).str.strip() == str(params['piloto']).strip()
     match_pass = df_j['Password'].astype(str).str.strip() == str(params['llave']).strip()
     user_match = df_j[match_nombre & match_pass]
-    
     if not user_match.empty:
         piloto_limpio = str(params['piloto']).strip()
         st.session_state['usuario_activo'] = piloto_limpio
@@ -182,7 +185,7 @@ if 'piloto' in params and 'llave' in params and st.session_state['usuario_activo
         st.rerun()
 
 if st.session_state['usuario_activo'] is None:
-    tab1, tab2, tab3 = st.tabs(["🔐 Acceso", "📝 Registrarse", "🆘 Olvidé mi Clave"])
+    tab1, tab2, tab3 = st.tabs(["Acceso", "Registrarse", "Olvidé mi Clave"])
     with tab1:
         u = st.text_input("Alias de Piloto:", key="l_u")
         p = st.text_input("Contraseña:", type="password", key="l_p")
@@ -205,11 +208,9 @@ if st.session_state['usuario_activo'] is None:
         
         df_la = fetch_data_campeonatos_admin()
         campeonatos_existentes = sorted([str(l).strip() for l in df_la['Nombre_Campeonato'].unique() if str(l).strip() != ""]) if not df_la.empty else []
-            
-        opciones_camp = campeonatos_existentes + ["Otro (Crear Nuevo)"]
-        n_camp_sel = st.selectbox("Selecciona tu Campeonato *", opciones_camp, index=None, placeholder="Elige el campeonato de tus amigos...")
-        
-        n_camp_final = st.text_input("Nombre de tu Nuevo Campeonato *", key="r_camp_nuevo").strip() if n_camp_sel == "Otro (Crear Nuevo)" else n_camp_sel
+    opciones_camp = campeonatos_existentes + ["Otro (Crear Nuevo)"]
+    n_camp_sel = st.selectbox("Selecciona tu Campeonato", opciones_camp, index=None, placeholder="Elige el campeonato de tus amigos...")
+    n_camp_final = st.text_input("Nombre de tu Nuevo Campeonato *", key="r_camp_nuevo").strip() if n_camp_sel == "Otro (Crear Nuevo)" else n_camp_sel
 
         wp = st.text_input("WhatsApp", key="r_w")
         mail = st.text_input("Correo *", key="r_m")
